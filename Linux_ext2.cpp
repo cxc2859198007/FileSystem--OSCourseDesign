@@ -406,7 +406,7 @@ void RemoveFile(unsigned int nowinode) {//É¾³ıiNodeÎªnowinodeµÄÆÕÍ¨ÎÄ¼ş
 	RemoveFileINodeBitmap(nowinode);
 
 	//step5: ¸üĞÂ×Ô¼ºµÄiNodeTable£¬Çå¿Õ
-	inodetb.inode[nowinode].clear();
+	inodetb.inode[nowinode].clear1();
 
 	//step6: ½«³¬¼¶¿éµÈĞÅÏ¢»ØÎÄ¼şÏµÍ³£¬±£Ö¤Êı¾İÒ»ÖÂĞÔ
 	WriteFileSystem();
@@ -458,7 +458,7 @@ void RemoveEmptyDir(unsigned int nowinode) {//É¾³ıiNodeÎªnowinodeµÄÄ¿Â¼£¬´ËÄ¿Â¼±
 	superblock.use_inode--;
 
 	//step5: ¸üĞÂ×Ô¼ºµÄiNodeTable£¬Çå¿Õ
-	inodetb.inode[nowinode].clear();
+	inodetb.inode[nowinode].clear1();
 
 	//step6: ½«³¬¼¶¿éµÈĞÅÏ¢»ØÎÄ¼şÏµÍ³£¬±£Ö¤Êı¾İÒ»ÖÂĞÔ
 	WriteFileSystem();
@@ -542,14 +542,13 @@ void CatWrite(unsigned int nowinode) {
 	if (Size % sizeof(Block) != 0) needblock++;
 	needinode = needblock / 17;
 	if (needblock % 17 != 0) needinode++;
-	/*
+	
 	if (superblock.use_datablock + needblock > superblock.tot_datablock) {
 		cout << "  Êı¾İ¿éÊıÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
 	}
 	if (superblock.use_inode + needinode > superblock.tot_inode) {
 		cout << "  iNodeÊıÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
 	}
-	*/
 
 	//step3: ½«×Ö·û´®²¹³É4µÄÕûÊı±¶£¬·½±ãĞ´Èë»º³åÇø
 	unsigned int len = str.length();
@@ -583,7 +582,7 @@ void CatWrite(unsigned int nowinode) {
 	return;
 }
 
-unsigned int CopyHostToBuffer(string hostpath) {//½«Òª¿½±´µÄÎÄ¼ş·Åµ½»º³åÇøÖĞ£¬·µ»ØĞèÒªµÄ´ÅÅÌ¿éÊı
+void CopyHostToBuffer(string hostpath) {//½«Òª¿½±´µÄÎÄ¼ş·Åµ½»º³åÇøÖĞ
 	//step1: Çå¿Õ»º³åÇø
 	while (!buffer.empty()) buffer.pop();
 
@@ -636,41 +635,47 @@ unsigned int CopyHostToBuffer(string hostpath) {//½«Òª¿½±´µÄÎÄ¼ş·Åµ½»º³åÇøÖĞ£¬·µ
 	}
 	buffer.push(db2);
 
-	return blockneed2;
+	//step5: ¹Ø±ÕÎÄ¼ş
+	f.close();
 }
-void CopyBufferToLinux(unsigned int nowinode) {
-	//step1: Ğ´ÈëÎÄ¼şÏµÍ³
+void CopyBufferToLinux(unsigned int nowinode) {//½«»º³åÇø×·¼ÓĞ´ÈëÎÄ¼şÏµÍ³
+	//step1: Ô­ÎÄ¼ş¿ÉÄÜÕ¼ÓĞ¶à¸öiNode£¬ĞèÒªÕÒµ½×îºóÒ»¸ö
+	while (inodetb.inode[nowinode].next_pos != INF)
+		nowinode = inodetb.inode[nowinode].next_pos;
+
+	//step2: Ğ´ÈëÎÄ¼şÏµÍ³
 	Block db;
 	while (!buffer.empty()) { //»º³åÇø²»Îª¿Õ
-		db = buffer.front();  //È¡¶ÓÊ×
-		buffer.pop();         //µ¯³ö¶ÓÊ×
-		if (inodetb.inode[nowinode].block_num == 17) {					   //´ËiNodeÒÑÂú
+		if (inodetb.inode[nowinode].block_num == 17) {//´ËiNodeÒÑÂú
 			unsigned int nextinode = FindFreeINode();//ÏÂÒ»¸öÎÄ¼şµÄiNodeÏÂ±ê
-			inodetb.inode[nextinode].clear();
+			inodetb.inode[nextinode].clear2();
 			inodetb.inode[nowinode].next_pos = nextinode;//ĞÎ³ÉÁ´±í½á¹¹
 			
-			CopyBufferToLinux(nextinode);
+			return CopyBufferToLinux(nextinode);
 		}
 
+		//È¡Êı¾İ
+		db = buffer.front();  //È¡¶ÓÊ×
+		buffer.pop();         //µ¯³ö¶ÓÊ×
+		
 		//·ÖÅäÊı¾İ¿é
 		unsigned int datablock = FindFreeBlock();        //·ÖÅäµÄÊı¾İ¿éÏÂ±ê
-
-		inodetb.inode[nowinode].block_pos[inodetb.inode[nowinode].block_num++] = datablock;//¸üĞÂiNode±í
-		WriteBlock(datablock + groupdes.data_begin, db); //Ğ´ÈëÊı¾İ¿é
+		WriteBlock(groupdes.data_begin + datablock, db); //Ğ´ÈëÊı¾İ¿é
+		
+		//¸üĞÂiNode±í
+		unsigned int pos = inodetb.inode[nowinode].block_num++;
+		inodetb.inode[nowinode].block_pos[pos] = datablock;
 	}
 
 	return;
 }
 void CopyHost(string filename, string hostpath, unsigned int dirinode) {//°ÑÖ÷»úÂ·¾¶Îªhostpath,ÎÄ¼şÃûÎªfilenameµÄÎÄ¼ş¿½±´µ½iNodeÎªdirinodeµÄÄ¿Â¼ÖĞ
 	//step1: ½«ËùÓĞÎÄ¼şÊı¾İ·ÅÈë»º³åÇøÖĞ
-	unsigned int blockneed = CopyHostToBuffer(hostpath);
+	CopyHostToBuffer(hostpath);
 
 	//step2: ÅĞ¶ÏiNode»òÕßÊı¾İ¿é¹»²»¹»
-	unsigned int Size = sizeof(buffer);
-	unsigned int needblock = 0, needinode = 0;
-	needblock = Size / sizeof(Block);
-	if (Size % sizeof(Block) != 0) needblock++;
-	needinode = needblock / 17;
+	unsigned int needblock = buffer.size();
+	unsigned int needinode = needblock / 17;
 	if (needblock % 17 != 0) needinode++;
 
 	if (superblock.use_datablock + needblock > superblock.tot_datablock) {
@@ -705,14 +710,14 @@ void CopyLinuxToLinux(unsigned int inode1, unsigned int inode2) {//ÎÄ¼şÏµÍ³ÄÚ²¿µ
 
 		unsigned int datablock = FindFreeBlock();  //·ÖÅäµÄÊı¾İ¿éÏÂ±ê
 		inodetb.inode[inode2].block_pos[i] = datablock; //¸üĞÂiNode±í
-		WriteBlock(datablock, db);                      //Ğ´ÈëÊı¾İ¿é
+		WriteBlock(groupdes.data_begin + datablock, db);//Ğ´ÈëÊı¾İ¿é
 	}
 
 	if (inodetb.inode[inode1].next_pos != INF) {
 		unsigned int nextinode = FindFreeINode();  //ÏÂÒ»¸öÎÄ¼şµÄiNodeÏÂ±ê
-
-		inodetb.inode[nextinode].clear();
+		inodetb.inode[nextinode].clear2();
 		inodetb.inode[inode2].next_pos = nextinode;
+
 		return CopyLinuxToLinux(inodetb.inode[inode1].next_pos, inodetb.inode[inode2].next_pos);
 	}
 
@@ -741,6 +746,7 @@ void CopyLxfs(string filename, unsigned int fileinode, unsigned int dirinode) {/
 
 	//step3: ¸´ÖÆ
 	 CopyLinuxToLinux(fileinode, nowinode);
+	 cout << "  ¿½±´³É¹¦£¡" << endl;
 
 	//step4: ¸üĞÂÎÄ¼şÏµÍ³Êı¾İ
 	WriteFileSystem();
@@ -769,16 +775,17 @@ bool Exist(unsigned int fathinode, string sonname) {//ÅĞ¶ÏÔÚiNodeºÅÎªfathinodeµÄ
 
 void ShowHelp() {//ÃüÁîÌáÊ¾
 	cout << "************************Linux ext2ÎÄ¼şÏµÍ³************************" << endl << endl;
-	cout << "    info           ÏÔÊ¾Õû¸öÏµÍ³ĞÅÏ¢" << endl;
-	cout << "    cd...          ¸Ä±äÄ¿Â¼" << endl;
-	cout << "    dir...         ÏÔÊ¾Ä¿Â¼" << endl;
-	cout << "    md...          ´´½¨Ä¿Â¼" << endl;
-	cout << "    rd...          É¾³ıÄ¿Â¼" << endl;
-	cout << "    newfile...     ½¨Á¢ÎÄ¼ş" << endl;
-	cout << "    cat...         ´ò¿ªÎÄ¼ş" << endl;
-	cout << "    copy...        ¿½±´ÎÄ¼ş" << endl;
-	cout << "    del...         É¾³ıÎÄ¼ş" << endl;
-	cout << "    check...       ¼ì²â²¢»Ö¸´ÎÄ¼şÏµÍ³" << endl;
+	cout << "    info                                       ÏÔÊ¾Õû¸öÏµÍ³ĞÅÏ¢" << endl;
+	cout << "    cd path                                    ¸Ä±äÄ¿Â¼" << endl;
+	cout << "    dir <path> <s>                             ÏÔÊ¾Ä¿Â¼" << endl;
+	cout << "    md dirname <path>                          ´´½¨Ä¿Â¼" << endl;
+	cout << "    rd path                                    É¾³ıÄ¿Â¼" << endl;
+	cout << "    newfile filename <path>                    ½¨Á¢ÎÄ¼ş" << endl;
+	cout << "    cat path <r,w>                             ´ò¿ªÎÄ¼ş" << endl;
+	cout << "    copy<host> D:\\xxx\\yyy\\zzz /aaa/bbb         ¿½±´Ö÷»úÎÄ¼ş" << endl;
+	cout << "    copy<lxfs> /xxx/yyy/zzz /aaa/bbb           ¿½±´ÄÚ²¿ÎÄ¼ş" << endl;
+	cout << "    del path                                   É¾³ıÎÄ¼ş" << endl;
+	cout << "    check                                      ¼ì²â²¢»Ö¸´ÎÄ¼şÏµÍ³" << endl;
 	cout << endl;
 
 	return;
@@ -958,6 +965,7 @@ void Cat() {//cat path <r, w>
 }
 void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb »ò copy<lxfs> /xxx/yyy/zzz /aaa/bbb
 	FindAbsolutePath(order.od[2]);
+
 	if (order.od[0] == "copy<host>") {//host-->Linux
 		unsigned int lastpos = order.od[1].find_last_of("\\");//ÌáÈ¡ÎÄ¼şÃû
 		string filename = order.od[1].substr(lastpos + 1);
@@ -968,6 +976,7 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb »ò copy<lxfs> /xxx/yyy/zzz /aa
 				cout << "  ¸ÃÎÄ¼şÒÑ´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
 				return;
 			}
+			
 			CopyHost(filename, order.od[1], inode);
 		}
 	}
@@ -1095,7 +1104,6 @@ void Run() {//ÔËĞĞ³ÌĞò
 
 
 int main() {
-	//CatWrite(0);
 	Run();
 	cout << "  ÒÑÍË³öÏµÍ³£¡" << endl;
 	return 0;

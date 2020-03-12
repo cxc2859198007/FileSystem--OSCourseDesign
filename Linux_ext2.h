@@ -147,7 +147,7 @@ public:
 		block_pos[0] = 0;//存在第0个数据块中
 		for (int i = 1; i < 17; i++) block_pos[i] = INF;
 	}
-	void clear() {
+	void clear1() {
 		memset(name, '\0', sizeof(name)); name[0] = '/';
 		last_pos = INF;
 		next_pos = INF;
@@ -158,6 +158,17 @@ public:
 		block_num = 1;
 		block_pos[0] = 0;
 		for (int i = 1; i < 17; i++) block_pos[i] = INF;
+	}
+	void clear2() {
+		memset(name, '\0', sizeof(name));
+		last_pos = INF;
+		next_pos = INF;
+		type = 0;
+		files_num = 0;
+		user_id = root;
+		mode = 0;
+		block_num = 0;
+		for (int i = 0; i < 17; i++) block_pos[i] = INF;
 	}
 };
 
@@ -408,19 +419,19 @@ void CatRead(unsigned int nowinode);
 
 void CatWrite(unsigned int nowinode);
 /*
-	Description: 覆盖写方式打开文件
+	Description: 追加写方式打开文件，若之前的数据块没有用完，追加的内容也不会接着写而是新开一个磁盘块
 	Input: nowinode是文件iNode号
 	Output: 无
 	Return: 无
 */
 
 
-unsigned int CopyHostToBuffer(string hostpath);
+void CopyHostToBuffer(string hostpath);
 /*
-	Description: 将要拷贝的主机文件放到缓冲区中，返回需要的磁盘块数
+	Description: 将要拷贝的主机文件放到缓冲区中
 	Input: hostpath是主机文件的路径
 	Output: 无
-	Return: 将文件存入文件系统所需要的磁盘块的个数
+	Return: 无
 */
 
 void CopyBufferToLinux(unsigned int nowinode);
