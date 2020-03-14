@@ -1,4 +1,5 @@
 #include"Linux_ext2.h"
+#include"TestData.h"
 using namespace std;
 
 
@@ -28,9 +29,10 @@ void FindOrder(Order& ord) {//找输入的命令的含义
 	else if (order.od[0] == "rd")                                                order.type = 5;
 	else if (order.od[0] == "newfile")                                           order.type = 6;
 	else if (order.od[0] == "cat")                                               order.type = 7;
-	else if (order.od[0] == "copy<host>"|| order.od[0] == "copy<lxfs>")          order.type = 8;
+	else if (order.od[0] == "copy<host>" || order.od[0] == "copy<lxfs>")         order.type = 8;
 	else if (order.od[0] == "del")                                               order.type = 9;
 	else if (order.od[0] == "check")                                             order.type = 10;
+	else if (order.od[0] == "ls")                                                order.type = 11;
 	else                                                                         order.type = INF;
 
 	return;
@@ -529,6 +531,37 @@ void CatRead(unsigned int nowinode) {
 	cout << endl;
 	return;
 }
+void CatReadToHost(unsigned int nowinode, string path) {
+	Block db;
+	path = path + "/" + inodetb.inode[nowinode].name;
+	fout.open(path, ios::out);
+	for (;;) {
+		//step1: 枚举当前iNode下所有块的数据
+		for (int i = 0; i < inodetb.inode[nowinode].block_num; i++) {
+			unsigned int blockpos = inodetb.inode[nowinode].block_pos[i];
+			blockpos = groupdes.data_begin + blockpos;
+			ReadBlock(blockpos, db);
+			for (int j = 0; j < 256; j++) {
+				char c1, c2, c3, c4;
+				c1 = char((db.data[j] & (unsigned int)4278190080) >> 24);
+				c2 = char((db.data[j] & (unsigned int)16711680) >> 16);
+				c3 = char((db.data[j] & (unsigned int)65280) >> 8);
+				c4 = char(db.data[j] & (unsigned int)255);
+				if (c1 == '\0' && c2 == '\0' && c3 == '\0' && c4 == '\0') {//连续4个空格表示内容结束
+					break;
+				}
+				fout << c1 << c2 << c3 << c4;
+			}
+		}
+
+		//step2: 考虑大文件可能占有多个iNode
+		if (inodetb.inode[nowinode].next_pos == INF) break;
+		nowinode = inodetb.inode[nowinode].next_pos;
+	}
+	
+	f.close();
+	return;
+}
 void CatWrite(unsigned int nowinode) {
 	//step1: 读入一行字符串
 	string str;
@@ -581,6 +614,7 @@ void CatWrite(unsigned int nowinode) {
 
 	return;
 }
+
 
 void CopyHostToBuffer(string hostpath) {//将要拷贝的文件放到缓冲区中
 	//step1: 清空缓冲区
@@ -851,7 +885,55 @@ void ShowDir(unsigned int nowdir, bool sonfile) {//显示iNode为nowdir的目录信息，
 
 	return;
 }
-void CoutPath() {
+void ShowList() {
+	Block db;
+	while (!qdirinode.empty()) qdirinode.pop();
+	qdirinode.push(RootDir);
+
+	cout.setf(ios::left);
+	cout << "  " << setw(15) << "目录/文件名" << setw(15) << "上级目录名" << setw(10) << "类型" << setw(12) << "大小(块)" << setw(10) << "子目录/子文件" << endl;
+	while (!qdirinode.empty()) {
+		unsigned int nowinode = qdirinode.front();
+		unsigned int fathinode = inodetb.inode[nowinode].last_pos;
+		qdirinode.pop();
+
+		if (inodetb.inode[nowinode].type == 0) {//目录文件
+			
+			if (nowinode == RootDir)//根目录
+				cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << " " << setw(10) << "<DIR>" << setw(12) << 1;
+			else
+				cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << inodetb.inode[fathinode].name << setw(10) << "<DIR>" << setw(12) << 1;
+
+			unsigned int blockpos = inodetb.inode[nowinode].block_pos[0];
+			blockpos = groupdes.data_begin + blockpos;
+			ReadBlock(blockpos, db);
+			for (int i = 0, cnt = 0; i < inodetb.inode[nowinode].files_num; i++, cnt++) {
+				unsigned int soninode = db.data[i];
+				qdirinode.push(soninode);
+				if (cnt == 0)
+					cout << setw(15) << inodetb.inode[soninode].name << endl;
+				else 
+					cout << setw(54)<<" " << inodetb.inode[soninode].name << endl;
+			}
+			if (inodetb.inode[nowinode].files_num == 0) cout << endl;
+		}
+		else {//普通二进制文件
+			cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << inodetb.inode[fathinode].name << setw(10) << "<FILE>";
+			unsigned int blocknum = 0;
+			unsigned int tmpinode = nowinode;
+			for (;;) {
+				blocknum += inodetb.inode[tmpinode].block_num;
+				if (inodetb.inode[tmpinode].next_pos == INF) break;
+				tmpinode = inodetb.inode[tmpinode].next_pos;
+			}
+			cout << setw(12) << blocknum << endl;
+		}
+
+	}
+
+	return;
+}
+void ShowPath() {
 	string str = inodetb.inode[CurrentPath].name;
 	cout << "  " << str << ">$ ";
 }
@@ -963,22 +1045,32 @@ void Cat() {//cat path <r, w>
 
 	return;
 }
-void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb 或 copy<lxfs> /xxx/yyy/zzz /aaa/bbb
+void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> 或 copy<lxfs> /xxx/yyy/zzz /aaa/bbb
 	FindAbsolutePath(order.od[2]);
 
 	if (order.od[0] == "copy<host>") {//host-->Linux
-		unsigned int lastpos = order.od[1].find_last_of("\\");//提取文件名
-		string filename = order.od[1].substr(lastpos + 1);
-		unsigned int inode = FindFileINode(order.od[2]);
-		if (inode == INF) cout << "  输入路径不存在，拷贝失败！" << endl;
-		else {
-			if (Exist(inode, filename) == true) {
-				cout << "  该文件已存在，拷贝失败！" << endl;
-				return;
+		if (order.od[3] == "0") {//主机拷贝到文件系统
+			unsigned int lastpos = order.od[1].find_last_of("\\");//提取文件名
+			string filename = order.od[1].substr(lastpos + 1);
+			unsigned int inode = FindFileINode(order.od[2]);
+			if (inode == INF) cout << "  输入路径不存在，拷贝失败！" << endl;
+			else {
+				if (Exist(inode, filename) == true) {
+					cout << "  该文件已存在，拷贝失败！" << endl;
+					return;
+				}
+
+				CopyHost(filename, order.od[1], inode);
 			}
-			
-			CopyHost(filename, order.od[1], inode);
 		}
+		else {//文件系统拷贝到主机
+			unsigned int inode = FindFileINode(order.od[2]);
+			if (inode == INF) cout << "  输入路径不存在，拷贝失败！" << endl;
+			else {
+				CatReadToHost(inode, order.od[1]);
+			}
+		}
+
 	}
 	else {//Linux-->Linux
 		unsigned int lastpos = order.od[1].find_last_of("/");//提取文件名
@@ -1017,6 +1109,12 @@ void Check() {//check
 
 	return;
 }
+void Ls() {
+	ShowList();
+
+	return;
+}
+
 void Run() {//运行程序
 	//step1: 显示个人信息
 	cout << "++++++++++++++++++++++++++++++++++++++" << endl;
@@ -1055,7 +1153,7 @@ void Run() {//运行程序
 
 	//step4: 循环接收命令，直到输入exit
 	while (1) {
-		CoutPath(); FindOrder(order);//获得命令
+		ShowPath(); FindOrder(order);//获得命令
 		
 		switch (order.type) {
 		case 0:		//Exit
@@ -1093,18 +1191,37 @@ void Run() {//运行程序
 		case 10:    //check
 			Check();
 			break;
+		case 11:
+			Ls();
+			break;
 
 		default:
 			cout << "  输入指令有误，请重新输入！" << endl;
 		}
 	}
 
+	cout << "  已退出系统！" << endl;
 	return;
 }
 
 
 int main() {
+	srand((unsigned int)time(NULL));
+
+	/*
+	RandMd();
+	RandNewfile();
+	RandCopyhost();
+	RandCopylinux();
+	Delete();
+	RandMd();
+	RandNewfile();
+	RandCopyhost();
+	RandCopylinux();
+	Print();
+	*/
+	
 	Run();
-	cout << "  已退出系统！" << endl;
+	
 	return 0;
 }

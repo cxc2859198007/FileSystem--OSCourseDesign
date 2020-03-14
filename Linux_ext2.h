@@ -13,12 +13,14 @@
 #include<fstream>
 #include<istream>
 #include<ostream>
+#include<iomanip>
 #include<Windows.h>
 using namespace std;
 typedef double db;
 const unsigned int INF = 1e9 + 7;
 const unsigned int root = 0;
 fstream f;
+ofstream fout;
 
 const string FileName = "Linux_ext2";                    //文件名
 const unsigned int RootDir = 0;                          //根目录的iNode号
@@ -234,8 +236,11 @@ iNodeBitmap inodemp;
 iNodeTable inodetb;
 
 queue<Block> buffer;//缓冲区，用于copy<host>命令
+queue<unsigned int> qdirinode;//用于ls命令
+
 
 void Run();//运行程序
+
 
 void FindOrder(Order& ord);
 /*
@@ -244,7 +249,6 @@ void FindOrder(Order& ord);
 	Output: 无
 	Return: 无
 */
-
 unsigned int FindFirstZero(unsigned int x);
 /*
 	Description: 找x转化为二进制后的第一个0的位置
@@ -252,7 +256,6 @@ unsigned int FindFirstZero(unsigned int x);
 	Output: 无
 	Return: 从左向右第一个0的位置，[1,32]
 */
-
 unsigned int FindFreeBlock();
 /*
 	Description: 找到一个空闲的数据块，并在块位图中占用，调用此函数要保证一定有空闲块
@@ -260,7 +263,6 @@ unsigned int FindFreeBlock();
 	Output: 无
 	Return: 数据块编号，[0,131071]
 */
-
 unsigned int FindFreeINode();
 /*
 	Description: 找到一个空闲的iNode，并在iNode表中占用
@@ -268,7 +270,6 @@ unsigned int FindFreeINode();
 	Output: 无
 	Return: iNode编号，[0,32767]
 */
-
 bool FindDisk();
 /*
 	Description: 找文件系统的二进制文件
@@ -276,7 +277,6 @@ bool FindDisk();
 	Output: 无
 	Return: 存在true，不存在false
 */
-
 void FindAbsolutePath(string& relpath);
 /*
 	Description: 把路径转化为绝对路径
@@ -284,7 +284,6 @@ void FindAbsolutePath(string& relpath);
 	Output: 无
 	Return: 无
 */
-
 unsigned int FindFileINode(unsigned int nowdir, string filename);
 /*
 	Description: 找iNode号为nowdir的目录下，文件名（目录或二进制文件）为filename的iNode号
@@ -292,7 +291,6 @@ unsigned int FindFileINode(unsigned int nowdir, string filename);
 	Output: 无
 	Return: 文件名为filename的iNode号，INF表示不存在
 */
-
 unsigned int FindFileINode(string s);
 /*
 	Description: 根据绝对路径找iNode号
@@ -309,7 +307,6 @@ void ReadFileSystem();
 	Output: 无
 	Return: 无
 */
-
 void ReadBlock(unsigned int pos, Block& bk);
 /*
 	Description: 读取下标为pos的磁盘块信息
@@ -326,7 +323,6 @@ void WriteFileSystem();
 	Output: 无
 	Return: 无
 */
-
 void WriteBlock(unsigned int pos, Block& bk);
 /*
 	Description: 将磁盘块bk覆盖写到下标为pos的磁盘块中
@@ -343,7 +339,6 @@ void CreateFileSystem();
 	Output: 无
 	Return: 无
 */
-
 unsigned int CreateNewFile(unsigned int fathinode, string filename);
 /*
 	Description: 在iNode为fathinode的目录下创建新文件filename
@@ -351,7 +346,6 @@ unsigned int CreateNewFile(unsigned int fathinode, string filename);
 	Output: 无
 	Return: 新文件的iNode，INF表示新建失败
 */
-
 unsigned int CreateNewDir(unsigned int fathinode, string dirname);
 /*
 	Description: 在iNode为fathinode的目录下创建新目录dirname
@@ -368,7 +362,6 @@ void RemoveFileINodeBitmap(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
 void RemoveFileBlockBitmap(unsigned int nowinode);
 /*
 	Description: 将iNode号为nowinode的文件所占用的块位图全部释放
@@ -376,7 +369,6 @@ void RemoveFileBlockBitmap(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
 void RemoveFileDataBlock(unsigned int nowinode);
 /*
 	Description: 将iNode号为nowinode的文件所占用的数据块全部释放
@@ -384,7 +376,6 @@ void RemoveFileDataBlock(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
 void RemoveFile(unsigned int nowinode);
 /*
 	Description: 删除iNode为nowinode的文件
@@ -392,7 +383,6 @@ void RemoveFile(unsigned int nowinode);
 	Output: 无
 	Return:  无
 */
-
 void RemoveEmptyDir(unsigned int nowinode);
 /*
 	Description: 删除iNode为nowinode的目录，此目录保证是空目录
@@ -400,7 +390,6 @@ void RemoveEmptyDir(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
 void RemoveDir(unsigned int nowinode);//删除iNode为nowinode的目录
 /*
 	Description: 删除iNode为nowinode的目录，此目录下可能有其他文件
@@ -416,7 +405,13 @@ void CatRead(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
+void CatReadToHost(unsigned int nowinode, string path);
+/*
+	Description: 只读方式打开文件,并写入主机里
+	Input: nowinode是文件iNode号，path是要写入的主机路径
+	Output: 无
+	Return: 无
+*/
 void CatWrite(unsigned int nowinode);
 /*
 	Description: 追加写方式打开文件，若之前的数据块没有用完，追加的内容也不会接着写而是新开一个磁盘块
@@ -433,7 +428,6 @@ void CopyHostToBuffer(string hostpath);
 	Output: 无
 	Return: 无
 */
-
 void CopyBufferToLinux(unsigned int nowinode);
 /*
 	Description: 将缓冲区的数据写入文件系统,调用此函数要保证iNode和数据块充足
@@ -441,7 +435,6 @@ void CopyBufferToLinux(unsigned int nowinode);
 	Output: 无
 	Return: 无
 */
-
 void CopyLinuxToLinux(unsigned int inode1, unsigned int inode2);
 /*
 	Description: 文件系统内部的二进制文件拷贝,调用此函数要保证iNode和数据块充足
@@ -449,7 +442,6 @@ void CopyLinuxToLinux(unsigned int inode1, unsigned int inode2);
 	Output: 无
 	Return: 无
 */
-
 void CopyHost(string filename, string hostpath, unsigned int dirinode);
 /*
 	Description: 把主机路径为hostpath的文件复制到iNode为dirinode的目录中
@@ -457,7 +449,6 @@ void CopyHost(string filename, string hostpath, unsigned int dirinode);
 	Output: 成功或失败的原因
 	Return: 无
 */
-
 void CopyLxfs(string filename, unsigned int fileinode, unsigned int dirinode);
 /*
 	Description: LinuxFileSystem的内部复制
@@ -474,6 +465,13 @@ void ChangeDir(string newpath);
 	Output: 成功或失败
 	Return: 无
 */
+bool Exist(unsigned int fathinode, string sonname);
+/*
+	Description: 判断在iNode号为fathinode的目录下有没有名为sonname的文件
+	Input: fathinode是目录的iNode号，sonname是文件（目录或二进制文件）的iNode号
+	Output: 无
+	Return: true存在，false不存在
+*/
 
 
 void ShowHelp();
@@ -483,7 +481,6 @@ void ShowHelp();
 	Output: 无
 	Return:无
 */
-
 void ShowInfo();
 /*
 	Description: 显示整个系统信息
@@ -491,7 +488,6 @@ void ShowInfo();
 	Output: 无
 	Return: 无
 */
-
 void ShowDir(unsigned int nowdir);
 /*
 	Description: 显示iNode号为nowdir的目录信息
@@ -499,7 +495,6 @@ void ShowDir(unsigned int nowdir);
 	Output: 目录信息
 	Return: 无
 */
-
 void ShowDir(unsigned int nowdir, bool sonfile);
 /*
 	Description: 显示iNode为nowdir的目录信息，包括子目录名
@@ -507,16 +502,14 @@ void ShowDir(unsigned int nowdir, bool sonfile);
 	Output: 目录信息
 	Return: 无
 */
-
-bool Exist(unsigned int fathinode, string sonname);
+void ShowList();
 /*
-	Description: 判断在iNode号为fathinode的目录下有没有名为sonname的文件
-	Input: fathinode是目录的iNode号，sonname是文件（目录或二进制文件）的iNode号
-	Output: 无
-	Return: true存在，false不存在
+	Description: 输出当前文件系统的所有目录与二进制文件信息
+	Input: 无
+	Output: 目录与文件信息
+	Return: 无
 */
-
-void CoutPath();
+void ShowPath();
 /*
 	Description: 输出当前目录
 	Input: 无
@@ -524,20 +517,19 @@ void CoutPath();
 	Return: 无
 */
 
+
 void Info();
 /*
 	功能1：info命令，显示整个系统信息
 	格式：info
 	说明：无
 */
-
 void Cd();
 /*
 	功能2：cd命令，改变目录
 	格式：cd path
 	说明：path可以是相对路径或绝对路径
 */
-
 void Dir();
 /*
 	功能3：dir命令，显示目录
@@ -545,7 +537,6 @@ void Dir();
 	说明：path表示指定路径，没有path表示查看当前目录
 	      s表示显示所有的子目录，没有s表示不显示
 */
-
 void Md();
 /*
 	功能4：md命令，创建目录
@@ -553,14 +544,12 @@ void Md();
 	说明：dirname是目录名
 	      path是指定路径下创建，没有path是在当前路径下创建
 */
-
 void Rd();
 /*
 	功能5：rd命令，删除目录
 	格式：rd path
 	说明：path可以是绝对路径或者相对路径
 */
-
 void Newfile();
 /*
 	功能6：newfile命令，建立文件
@@ -568,7 +557,6 @@ void Newfile();
 	说明：filename是二进制文件名
 	      path是指定路径下创建，没有path是在当前路径下创建
 */
-
 void Cat();
 /*
 	功能7：cat命令，打开文件
@@ -576,25 +564,30 @@ void Cat();
 	说明：path可以是相对路径或绝对路径
 	      r表示只读打开，w表示追加写入打开（以回车结束）
 */
-
 void Copy();
 /*
 	功能8：copy命令，拷贝文件
-	格式：copy<host> D:\xxx\yyy\zzz /aaa/bbb 或 copy<lxfs> /xxx/yyy/zzz /aaa/bbb
-	说明：第一个是主机文件拷贝到文件系统，第二个是文件系统之间拷贝
+	格式：copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> 或 copy<lxfs> /xxx/yyy/zzz /aaa/bbb
+	说明：第一个0是主机文件拷贝到文件系统
+		  第一个1是文件系统拷贝到主机文件
+	      第二个是文件系统之间拷贝
 */
-
 void Del();
 /*
 	功能9：del命令，删除文件
 	格式：del path
 	说明：path可以是绝对路径或者相对路径
 */
-
 void Check();
 /*
 	功能10：check命令，检测并恢复文件系统
 	格式：check
+	说明：无
+*/
+void Ls();
+/*
+	功能11：ls命令，显示所有目录和二进制文件信息
+	格式：ls
 	说明：无
 */
 
