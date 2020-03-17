@@ -1,4 +1,4 @@
-#ifndef Linux_ext2
+ï»¿#ifndef Linux_ext2
 #define Linux_ext2
 #include<iostream>
 #include<cstdio>
@@ -15,34 +15,42 @@
 #include<ostream>
 #include<iomanip>
 #include<Windows.h>
+#include<conio.h>
+#include<tchar.h>
+#include<atlconv.h>Â 
 using namespace std;
+#define BUF_SIZE 8192
+TCHAR NameIn[] = TEXT("INPUT");
+TCHAR NameOut[] = TEXT("OUTPUT");
+TCHAR NameIoo[] = TEXT("INPUTOROUTPUT");
+
 typedef double db;
 const unsigned int INF = 1e9 + 7;
 const unsigned int root = 0;
 fstream f;
 ofstream fout;
 
-const string FileName = "Linux_ext2";                    //ÎÄ¼şÃû
-const unsigned int RootDir = 0;                          //¸ùÄ¿Â¼µÄiNodeºÅ
-const unsigned int BlockSize = 1024;                     //´ÅÅÌ¿é´óĞ¡1024Bytes
-const unsigned int iNodeSize = 128;                      //iNode´óĞ¡128Bytes
+const string FileName = "Linux_ext2";                    //æ–‡ä»¶å
+const unsigned int RootDir = 0;                          //æ ¹ç›®å½•çš„iNodeå·
+const unsigned int BlockSize = 1024;                     //ç£ç›˜å—å¤§å°1024Bytes
+const unsigned int iNodeSize = 128;                      //iNodeå¤§å°128Bytes
 
-const unsigned int TotalBlockNum = 102400;               //100MB¿Õ¼äµÄ×Ü´ÅÅÌ¿éÊı
-const unsigned int BootNum = 1;			                 //Òıµ¼¿é
-const unsigned int SuperNum = 1;			             //³¬¼¶¿é
-const unsigned int GroupDesNum = 1;		                 //×éÃèÊö·û
-const unsigned int BlockBpNum = 16;		                 //¿éÎ»Í¼
-const unsigned int iNodeBpNum = 4;		                 //iNodeÎ»Í¼
-const unsigned int iNodeTbNum = 4096;	                 //iNode±í
-const unsigned int DataBlockNum = 98281;       		     //Êı¾İ¿é¸öÊı
+const unsigned int TotalBlockNum = 102400;               //100MBç©ºé—´çš„æ€»ç£ç›˜å—æ•°
+const unsigned int BootNum = 1;			                 //å¼•å¯¼å—
+const unsigned int SuperNum = 1;			             //è¶…çº§å—
+const unsigned int GroupDesNum = 1;		                 //ç»„æè¿°ç¬¦
+const unsigned int BlockBpNum = 16;		                 //å—ä½å›¾
+const unsigned int iNodeBpNum = 4;		                 //iNodeä½å›¾
+const unsigned int iNodeTbNum = 4096;	                 //iNodeè¡¨
+const unsigned int DataBlockNum = 98281;       		     //æ•°æ®å—ä¸ªæ•°
 
-const unsigned int TotaliNodeNum = 32768;                //iNode×ÜÊı
+const unsigned int TotaliNodeNum = 32768;                //iNodeæ€»æ•°
 
-const unsigned int NameLen = 32;			             //ÎÄ¼şÃû³¤¶ÈÉÏÏŞ
-const unsigned int FileNum1 = 32768;		             //×ÜÎÄ¼şÊıÁ¿ÉÏÏŞ
-const unsigned int FileNum2 = 256;		                 //Ã¿¸öÄ¿Â¼ÎÄ¼şÏÂµÄÎÄ¼şÊıÁ¿ÉÏÏŞ
+const unsigned int NameLen = 32;			             //æ–‡ä»¶åé•¿åº¦ä¸Šé™
+const unsigned int FileNum1 = 32768;		             //æ€»æ–‡ä»¶æ•°é‡ä¸Šé™
+const unsigned int FileNum2 = 256;		                 //æ¯ä¸ªç›®å½•æ–‡ä»¶ä¸‹çš„æ–‡ä»¶æ•°é‡ä¸Šé™
 
-unsigned int CurrentPath = RootDir;                      //µ±Ç°Â·¾¶£¬´æ´¢iNode±àºÅ£¬³õÊ¼Îª¸ùÄ¿Â¼
+unsigned int CurrentPath = RootDir;                      //å½“å‰è·¯å¾„ï¼Œå­˜å‚¨iNodeç¼–å·ï¼Œåˆå§‹ä¸ºæ ¹ç›®å½•
 
 class BootBlock {//1block 1024B 8192b
 public:
@@ -69,9 +77,9 @@ public:
 	SuperBlock() {
 		tot_block = TotalBlockNum;
 		tot_datablock = DataBlockNum;
-		use_datablock = 1;//¸ùÄ¿Â¼Õ¼ÓÃÒ»¸öÊı¾İ¿é
+		use_datablock = 1;//æ ¹ç›®å½•å ç”¨ä¸€ä¸ªæ•°æ®å—
 		tot_inode = TotaliNodeNum;
-		use_inode = 1;//¸ùÄ¿Â¼Õ¼ÓÃÒ»¸öiNode
+		use_inode = 1;//æ ¹ç›®å½•å ç”¨ä¸€ä¸ªiNode
 		block_size = BlockSize;
 		inode_size = iNodeSize;
 		file_num1 = FileNum1;
@@ -95,7 +103,7 @@ public:
 	unsigned int standby[242];
 
 	GroupDescription() {
-		group_begin = 1; group_end = 102399;//µÚ0¸ö´ÅÅÌ¿éÊÇÒıµ¼¿é
+		group_begin = 1; group_end = 102399;//ç¬¬0ä¸ªç£ç›˜å—æ˜¯å¼•å¯¼å—
 		super_begin = 1; super_end = 1;
 		groupdes_begin = 2; groupdes_end = 2;
 		blockbm_begin = 3; blockbm_end = 18;
@@ -112,7 +120,7 @@ public:
 	unsigned int use[4096];
 	BlockBitmap() {
 		memset(use, 0, sizeof(use));
-		use[0] = 2147483648;//¸ùÄ¿Â¼Õ¼ÓÃµÚ0¸öbitmap
+		use[0] = 2147483648;//æ ¹ç›®å½•å ç”¨ç¬¬0ä¸ªbitmap
 	}
 };
 
@@ -121,32 +129,32 @@ public:
 	unsigned int use[1024];
 	iNodeBitmap() {
 		memset(use, 0, sizeof(use));
-		use[0] = 2147483648;//¸ùÄ¿Â¼Õ¼ÓÃµÚ0¸öbitmap
+		use[0] = 2147483648;//æ ¹ç›®å½•å ç”¨ç¬¬0ä¸ªbitmap
 	}
 };
 
 class iNode {//128B 1024b
 public:
-	char name[NameLen];           //ÎÄ¼şÃû
-	unsigned int last_pos;        //ËùÔÚÄ¿Â¼µÄiNodeºÅ[0,32767]
-	unsigned int next_pos;        //ÏÂÒ»¸öiNodeºÅ[0,32767]
-	unsigned int type;            //type==0Ä¿Â¼ type==1¶ş½øÖÆÎÄ¼ş
-	unsigned int files_num;       //Èç¹ûÊÇÄ¿Â¼ÎÄ¼ş£¬¼ÇÂ¼´ËÄ¿Â¼ÏÂÓĞ¶àÉÙÎÄ¼ş
-	unsigned int user_id;         //´´½¨ÈËid
-	unsigned int mode;		      //Ä£Ê½ mode==0¶ÁĞ´ mode==1Ö»¶Á 
-	unsigned int block_num;       //ÎÄ¼şÕ¼ÓÃ¿éÊı£¬Ä¿Â¼ÎÄ¼ş×î¶àÕ¼Ò»¸ö£¬ÆÕÍ¨ÎÄ¼şÈÎÒâ
-	unsigned int block_pos[17];   //´æÔÚÊı¾İÇøµÄ¿éºÅ Ä¿Â¼ÎÄ¼ş´æ´ËÄ¿Â¼ÏÂµÄÎÄ¼şiNode ¶ş½øÖÆÎÄ¼ş´æÊı¾İ
+	char name[NameLen];           //æ–‡ä»¶å
+	unsigned int last_pos;        //æ‰€åœ¨ç›®å½•çš„iNodeå·[0,32767]
+	unsigned int next_pos;        //ä¸‹ä¸€ä¸ªiNodeå·[0,32767]
+	unsigned int type;            //type==0ç›®å½• type==1äºŒè¿›åˆ¶æ–‡ä»¶
+	unsigned int files_num;       //å¦‚æœæ˜¯ç›®å½•æ–‡ä»¶ï¼Œè®°å½•æ­¤ç›®å½•ä¸‹æœ‰å¤šå°‘æ–‡ä»¶
+	unsigned int user_id;         //åˆ›å»ºäººid
+	unsigned int mode;		      //æ¨¡å¼ mode==0è¯»å†™ mode==1åªè¯» 
+	unsigned int block_num;       //æ–‡ä»¶å ç”¨å—æ•°ï¼Œç›®å½•æ–‡ä»¶æœ€å¤šå ä¸€ä¸ªï¼Œæ™®é€šæ–‡ä»¶ä»»æ„
+	unsigned int block_pos[17];   //å­˜åœ¨æ•°æ®åŒºçš„å—å· ç›®å½•æ–‡ä»¶å­˜æ­¤ç›®å½•ä¸‹çš„æ–‡ä»¶iNode äºŒè¿›åˆ¶æ–‡ä»¶å­˜æ•°æ®
 
-	iNode() {//¹¹Ôì³öµÄÊÇ¸ùÄ¿Â¼
+	iNode() {//æ„é€ å‡ºçš„æ˜¯æ ¹ç›®å½•
 		memset(name, '\0', sizeof(name)); name[0]='/';
-		last_pos = INF;//INF±íÊ¾¿Õ
+		last_pos = INF;//INFè¡¨ç¤ºç©º
 		next_pos = INF;
 		type = 0;
 		files_num = 0;
 		user_id = root;
 		mode = 0;
 		block_num = 1;
-		block_pos[0] = 0;//´æÔÚµÚ0¸öÊı¾İ¿éÖĞ
+		block_pos[0] = 0;//å­˜åœ¨ç¬¬0ä¸ªæ•°æ®å—ä¸­
 		for (int i = 1; i < 17; i++) block_pos[i] = INF;
 	}
 	void clear1() {
@@ -195,7 +203,7 @@ public:
 	Block block[98281];
 };
 
-class Path {//ÓÃÓÚÂ·¾¶·Ö½â£¬·½±ã²éÕÒ
+class Path {//ç”¨äºè·¯å¾„åˆ†è§£ï¼Œæ–¹ä¾¿æŸ¥æ‰¾
 public:
 	unsigned int cnt;
 	string  ph[3000];
@@ -210,7 +218,7 @@ public:
 	}
 }path;
 
-class Order {//ÓÃÓÚÓÃ»§ÊäÈëµÄÃüÁî·Ö½â£¬·½±ãÅĞ¶Ï
+class Order {//ç”¨äºç”¨æˆ·è¾“å…¥çš„å‘½ä»¤åˆ†è§£ï¼Œæ–¹ä¾¿åˆ¤æ–­
 public:
 	unsigned int cnt;
 	string od[20];
@@ -228,367 +236,414 @@ public:
 	}
 }order;
 
+class ShareMemory {//ä¸shelläº¤æ¢æ•°æ®
+public:
+	int cnt;
+	char str[20][300];
+	ShareMemory() {
+		cnt = 0;
+		memset(str, '\0', sizeof(str));
+	}
+	void clear() {
+		cnt = 0;
+		memset(str, '\0', sizeof(str));
+	}
+};
+
+class InputOrOutput {
+public:
+	int toshell;//simdiskç»™shellçš„é€šçŸ¥
+	int tosimdisk;//shellç»™simdiskçš„é€šçŸ¥
+	InputOrOutput() {
+		toshell = 0;
+		tosimdisk = 0;
+	}
+};
+
 BootBlock bootblock;
 SuperBlock superblock;
 GroupDescription groupdes;
 BlockBitmap blockmp;
 iNodeBitmap inodemp;
 iNodeTable inodetb;
+ShareMemory smi, smo;
+InputOrOutput ioo;
 
-queue<Block> buffer;//»º³åÇø£¬ÓÃÓÚcopy<host>ÃüÁî
-queue<unsigned int> qdirinode;//ÓÃÓÚlsÃüÁî
+queue<Block> buffer;//ç¼“å†²åŒºï¼Œç”¨äºcopy<host>å‘½ä»¤
+queue<unsigned int> qdirinode;//ç”¨äºlså‘½ä»¤
 
+HANDLE hMapFileIoo;
+InputOrOutput stioo;
+InputOrOutput* pBufIoo = &stioo;
 
-void Run();//ÔËĞĞ³ÌĞò
+HANDLE hMapFileIn;
+ShareMemory* pBufIn = NULL;
+
+HANDLE hMapFileOut;
+ShareMemory stout;
+ShareMemory* pBufOut = &stout;
+
+void Run();//è¿è¡Œç¨‹åº
 
 
 void FindOrder(Order& ord);
 /*
-	Description: ÓÃÓÚ»ñÈ¡ÊäÈëÃüÁî
-	Input: OrderÊµÀı»¯¶ÔÏóord£¬´æ´¢ÃüÁî¸÷²ÎÊı
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: ç”¨äºè·å–è¾“å…¥å‘½ä»¤
+	Input: Orderå®ä¾‹åŒ–å¯¹è±¡ordï¼Œå­˜å‚¨å‘½ä»¤å„å‚æ•°
+	Output: æ— 
+	Return: æ— 
 */
 unsigned int FindFirstZero(unsigned int x);
 /*
-	Description: ÕÒx×ª»¯Îª¶ş½øÖÆºóµÄµÚÒ»¸ö0µÄÎ»ÖÃ
+	Description: æ‰¾xè½¬åŒ–ä¸ºäºŒè¿›åˆ¶åçš„ç¬¬ä¸€ä¸ª0çš„ä½ç½®
 	Input: x
-	Output: ÎŞ
-	Return: ´Ó×óÏòÓÒµÚÒ»¸ö0µÄÎ»ÖÃ£¬[1,32]
+	Output: æ— 
+	Return: ä»å·¦å‘å³ç¬¬ä¸€ä¸ª0çš„ä½ç½®ï¼Œ[1,32]
 */
 unsigned int FindFreeBlock();
 /*
-	Description: ÕÒµ½Ò»¸ö¿ÕÏĞµÄÊı¾İ¿é£¬²¢ÔÚ¿éÎ»Í¼ÖĞÕ¼ÓÃ£¬µ÷ÓÃ´Ëº¯ÊıÒª±£Ö¤Ò»¶¨ÓĞ¿ÕÏĞ¿é
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: Êı¾İ¿é±àºÅ£¬[0,131071]
+	Description: æ‰¾åˆ°ä¸€ä¸ªç©ºé—²çš„æ•°æ®å—ï¼Œå¹¶åœ¨å—ä½å›¾ä¸­å ç”¨ï¼Œè°ƒç”¨æ­¤å‡½æ•°è¦ä¿è¯ä¸€å®šæœ‰ç©ºé—²å—
+	Input: æ— 
+	Output: æ— 
+	Return: æ•°æ®å—ç¼–å·ï¼Œ[0,131071]
 */
 unsigned int FindFreeINode();
 /*
-	Description: ÕÒµ½Ò»¸ö¿ÕÏĞµÄiNode£¬²¢ÔÚiNode±íÖĞÕ¼ÓÃ
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: iNode±àºÅ£¬[0,32767]
+	Description: æ‰¾åˆ°ä¸€ä¸ªç©ºé—²çš„iNodeï¼Œå¹¶åœ¨iNodeè¡¨ä¸­å ç”¨
+	Input: æ— 
+	Output: æ— 
+	Return: iNodeç¼–å·ï¼Œ[0,32767]
 */
 bool FindDisk();
 /*
-	Description: ÕÒÎÄ¼şÏµÍ³µÄ¶ş½øÖÆÎÄ¼ş
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: ´æÔÚtrue£¬²»´æÔÚfalse
+	Description: æ‰¾æ–‡ä»¶ç³»ç»Ÿçš„äºŒè¿›åˆ¶æ–‡ä»¶
+	Input: æ— 
+	Output: æ— 
+	Return: å­˜åœ¨trueï¼Œä¸å­˜åœ¨false
 */
 void FindAbsolutePath(string& relpath);
 /*
-	Description: °ÑÂ·¾¶×ª»¯Îª¾ø¶ÔÂ·¾¶
-	Input: ÊäÈëÂ·¾¶µÄ×Ö·û´®£¬¾ø¶ÔÂ·¾¶»òÊÇÏà¶ÔÂ·¾¶
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: æŠŠè·¯å¾„è½¬åŒ–ä¸ºç»å¯¹è·¯å¾„
+	Input: è¾“å…¥è·¯å¾„çš„å­—ç¬¦ä¸²ï¼Œç»å¯¹è·¯å¾„æˆ–æ˜¯ç›¸å¯¹è·¯å¾„
+	Output: æ— 
+	Return: æ— 
 */
 unsigned int FindFileINode(unsigned int nowdir, string filename);
 /*
-	Description: ÕÒiNodeºÅÎªnowdirµÄÄ¿Â¼ÏÂ£¬ÎÄ¼şÃû£¨Ä¿Â¼»ò¶ş½øÖÆÎÄ¼ş£©ÎªfilenameµÄiNodeºÅ
-	Input: nowdirÊÇÄ¿Â¼iNodeºÅ£¬filenameÊÇÒªÕÒµÄÎÄ¼şÃû
-	Output: ÎŞ
-	Return: ÎÄ¼şÃûÎªfilenameµÄiNodeºÅ£¬INF±íÊ¾²»´æÔÚ
+	Description: æ‰¾iNodeå·ä¸ºnowdirçš„ç›®å½•ä¸‹ï¼Œæ–‡ä»¶åï¼ˆç›®å½•æˆ–äºŒè¿›åˆ¶æ–‡ä»¶ï¼‰ä¸ºfilenameçš„iNodeå·
+	Input: nowdiræ˜¯ç›®å½•iNodeå·ï¼Œfilenameæ˜¯è¦æ‰¾çš„æ–‡ä»¶å
+	Output: æ— 
+	Return: æ–‡ä»¶åä¸ºfilenameçš„iNodeå·ï¼ŒINFè¡¨ç¤ºä¸å­˜åœ¨
 */
 unsigned int FindFileINode(string s);
 /*
-	Description: ¸ù¾İ¾ø¶ÔÂ·¾¶ÕÒiNodeºÅ
-	Input: ¾ø¶ÔÂ·¾¶µÄ×Ö·û´®
-	Output: ÎŞ
-	Return: Â·¾¶ÎÄ¼şµÄiNodeºÅ£¬INF±íÊ¾Â·¾¶ÓĞÎó
+	Description: æ ¹æ®ç»å¯¹è·¯å¾„æ‰¾iNodeå·
+	Input: ç»å¯¹è·¯å¾„çš„å­—ç¬¦ä¸²
+	Output: æ— 
+	Return: è·¯å¾„æ–‡ä»¶çš„iNodeå·ï¼ŒINFè¡¨ç¤ºè·¯å¾„æœ‰è¯¯
 */
 
 
 void ReadFileSystem();
 /*
-	Description: ¶ÁÈ¡ÎÄ¼şÏµÍ³µÄ³¬¼¶¿é¡¢×éÃèÊö·û¡¢Î»Í¼ºÍiNode±íĞÅÏ¢£¬´æÈë¶ÔÏó
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: è¯»å–æ–‡ä»¶ç³»ç»Ÿçš„è¶…çº§å—ã€ç»„æè¿°ç¬¦ã€ä½å›¾å’ŒiNodeè¡¨ä¿¡æ¯ï¼Œå­˜å…¥å¯¹è±¡
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
 */
 void ReadBlock(unsigned int pos, Block& bk);
 /*
-	Description: ¶ÁÈ¡ÏÂ±êÎªposµÄ´ÅÅÌ¿éĞÅÏ¢
-	Input: posÊÇ´ÅÅÌ¿éÏÂ±ê[0,102399]£¬bkÊÇÒª´æÈëµÄ´ÅÅÌ¿é¶ÔÏó
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: è¯»å–ä¸‹æ ‡ä¸ºposçš„ç£ç›˜å—ä¿¡æ¯
+	Input: posæ˜¯ç£ç›˜å—ä¸‹æ ‡[0,102399]ï¼Œbkæ˜¯è¦å­˜å…¥çš„ç£ç›˜å—å¯¹è±¡
+	Output: æ— 
+	Return: æ— 
 */
-
+void ReadShareMemory();
+/*
+	Description: è¯»å–ä¸€è¡Œå…±äº«å†…å­˜ä¸­çš„æ•°æ®
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
+*/
 
 void WriteFileSystem();
 /*
-	Description: ½«³¬¼¶¿é¡¢×éÃèÊö·û¡¢¿éÎ»Í¼¡¢iNodeÎ»Í¼¡¢iNode±íĞ´»ØÎÄ¼şÏµÍ³
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†è¶…çº§å—ã€ç»„æè¿°ç¬¦ã€å—ä½å›¾ã€iNodeä½å›¾ã€iNodeè¡¨å†™å›æ–‡ä»¶ç³»ç»Ÿ
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
 */
 void WriteBlock(unsigned int pos, Block& bk);
 /*
-	Description: ½«´ÅÅÌ¿ébk¸²¸ÇĞ´µ½ÏÂ±êÎªposµÄ´ÅÅÌ¿éÖĞ
-	Input: posÊÇ´ÅÅÌ¿éÏÂ±ê[0,102399]£¬bkÊÇÒªĞ´Èë´ÅÅÌµÄÊı¾İ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†ç£ç›˜å—bkè¦†ç›–å†™åˆ°ä¸‹æ ‡ä¸ºposçš„ç£ç›˜å—ä¸­
+	Input: posæ˜¯ç£ç›˜å—ä¸‹æ ‡[0,102399]ï¼Œbkæ˜¯è¦å†™å…¥ç£ç›˜çš„æ•°æ®
+	Output: æ— 
+	Return: æ— 
 */
-
+void WriteShareMemory();
+/*
+	Description: å°†è¦è¾“å‡ºçš„ä¸€è¡Œæ•°æ®æ”¾å…¥å…±äº«å†…å­˜
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
+*/
 
 void CreateFileSystem();
 /*
-	Description: ´´½¨ÎÄ¼şÏµÍ³
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: åˆ›å»ºæ–‡ä»¶ç³»ç»Ÿ
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
 */
 unsigned int CreateNewFile(unsigned int fathinode, string filename);
 /*
-	Description: ÔÚiNodeÎªfathinodeµÄÄ¿Â¼ÏÂ´´½¨ĞÂÎÄ¼şfilename
-	Input: fathinodeÊÇÄ¿Â¼iNodeºÅ£¬filenameÊÇ×ÓÎÄ¼ş£¨¶ş½øÖÆÎÄ¼ş£©µÄÎÄ¼şÃû
-	Output: ÎŞ
-	Return: ĞÂÎÄ¼şµÄiNode£¬INF±íÊ¾ĞÂ½¨Ê§°Ü
+	Description: åœ¨iNodeä¸ºfathinodeçš„ç›®å½•ä¸‹åˆ›å»ºæ–°æ–‡ä»¶filename
+	Input: fathinodeæ˜¯ç›®å½•iNodeå·ï¼Œfilenameæ˜¯å­æ–‡ä»¶ï¼ˆäºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„æ–‡ä»¶å
+	Output: æ— 
+	Return: æ–°æ–‡ä»¶çš„iNodeï¼ŒINFè¡¨ç¤ºæ–°å»ºå¤±è´¥
 */
 unsigned int CreateNewDir(unsigned int fathinode, string dirname);
 /*
-	Description: ÔÚiNodeÎªfathinodeµÄÄ¿Â¼ÏÂ´´½¨ĞÂÄ¿Â¼dirname
-	Input: fathinodeÊÇÄ¿Â¼iNodeºÅ£¬dirnameÊÇÄ¿Â¼Ãû
-	Output: ÎŞ
-	Return: ĞÂÄ¿Â¼µÄiNode£¬INF±íÊ¾ĞÂ½¨Ê§°Ü
+	Description: åœ¨iNodeä¸ºfathinodeçš„ç›®å½•ä¸‹åˆ›å»ºæ–°ç›®å½•dirname
+	Input: fathinodeæ˜¯ç›®å½•iNodeå·ï¼Œdirnameæ˜¯ç›®å½•å
+	Output: æ— 
+	Return: æ–°ç›®å½•çš„iNodeï¼ŒINFè¡¨ç¤ºæ–°å»ºå¤±è´¥
 */
 
 
 void RemoveFileINodeBitmap(unsigned int nowinode);
 /*
-	Description: ½«iNodeºÅÎªnowinodeµÄÎÄ¼şËùÕ¼ÓÃµÄiNodeÎ»Í¼È«²¿ÊÍ·Å£¨´óÎÄ¼ş¿ÉÄÜÊÍ·Å¶à¸öiNode£©
-	Input: nowinodeÊÇÎÄ¼ş£¨¶ş½øÖÆÎÄ¼ş£©µÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†iNodeå·ä¸ºnowinodeçš„æ–‡ä»¶æ‰€å ç”¨çš„iNodeä½å›¾å…¨éƒ¨é‡Šæ”¾ï¼ˆå¤§æ–‡ä»¶å¯èƒ½é‡Šæ”¾å¤šä¸ªiNodeï¼‰
+	Input: nowinodeæ˜¯æ–‡ä»¶ï¼ˆäºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 void RemoveFileBlockBitmap(unsigned int nowinode);
 /*
-	Description: ½«iNodeºÅÎªnowinodeµÄÎÄ¼şËùÕ¼ÓÃµÄ¿éÎ»Í¼È«²¿ÊÍ·Å
-	Input: nowinodeÊÇÎÄ¼ş£¨¶ş½øÖÆÎÄ¼ş£©µÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†iNodeå·ä¸ºnowinodeçš„æ–‡ä»¶æ‰€å ç”¨çš„å—ä½å›¾å…¨éƒ¨é‡Šæ”¾
+	Input: nowinodeæ˜¯æ–‡ä»¶ï¼ˆäºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 void RemoveFileDataBlock(unsigned int nowinode);
 /*
-	Description: ½«iNodeºÅÎªnowinodeµÄÎÄ¼şËùÕ¼ÓÃµÄÊı¾İ¿éÈ«²¿ÊÍ·Å
-	Input: nowinodeÊÇÎÄ¼ş£¨¶ş½øÖÆÎÄ¼ş£©µÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†iNodeå·ä¸ºnowinodeçš„æ–‡ä»¶æ‰€å ç”¨çš„æ•°æ®å—å…¨éƒ¨é‡Šæ”¾
+	Input: nowinodeæ˜¯æ–‡ä»¶ï¼ˆäºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 void RemoveFile(unsigned int nowinode);
 /*
-	Description: É¾³ıiNodeÎªnowinodeµÄÎÄ¼ş
-	Input: nowinodeÊÇÎÄ¼ş£¨¶ş½øÖÆÎÄ¼ş£©µÄiNodeºÅ
-	Output: ÎŞ
-	Return:  ÎŞ
+	Description: åˆ é™¤iNodeä¸ºnowinodeçš„æ–‡ä»¶
+	Input: nowinodeæ˜¯æ–‡ä»¶ï¼ˆäºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„iNodeå·
+	Output: æ— 
+	Return:  æ— 
 */
 void RemoveEmptyDir(unsigned int nowinode);
 /*
-	Description: É¾³ıiNodeÎªnowinodeµÄÄ¿Â¼£¬´ËÄ¿Â¼±£Ö¤ÊÇ¿ÕÄ¿Â¼
-	Input: nowinodeÊÇÄ¿Â¼µÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: åˆ é™¤iNodeä¸ºnowinodeçš„ç›®å½•ï¼Œæ­¤ç›®å½•ä¿è¯æ˜¯ç©ºç›®å½•
+	Input: nowinodeæ˜¯ç›®å½•çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
-void RemoveDir(unsigned int nowinode);//É¾³ıiNodeÎªnowinodeµÄÄ¿Â¼
+void RemoveDir(unsigned int nowinode);//åˆ é™¤iNodeä¸ºnowinodeçš„ç›®å½•
 /*
-	Description: É¾³ıiNodeÎªnowinodeµÄÄ¿Â¼£¬´ËÄ¿Â¼ÏÂ¿ÉÄÜÓĞÆäËûÎÄ¼ş
-	Input: nowinodeÊÇÄ¿Â¼µÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: åˆ é™¤iNodeä¸ºnowinodeçš„ç›®å½•ï¼Œæ­¤ç›®å½•ä¸‹å¯èƒ½æœ‰å…¶ä»–æ–‡ä»¶
+	Input: nowinodeæ˜¯ç›®å½•çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 
 void CatRead(unsigned int nowinode);
 /*
-	Description: Ö»¶Á·½Ê½´ò¿ªÎÄ¼ş
-	Input: nowinodeÊÇÎÄ¼şiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: åªè¯»æ–¹å¼æ‰“å¼€æ–‡ä»¶
+	Input: nowinodeæ˜¯æ–‡ä»¶iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 void CatReadToHost(unsigned int nowinode, string path);
 /*
-	Description: Ö»¶Á·½Ê½´ò¿ªÎÄ¼ş,²¢Ğ´ÈëÖ÷»úÀï
-	Input: nowinodeÊÇÎÄ¼şiNodeºÅ£¬pathÊÇÒªĞ´ÈëµÄÖ÷»úÂ·¾¶
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: åªè¯»æ–¹å¼æ‰“å¼€æ–‡ä»¶,å¹¶å†™å…¥ä¸»æœºé‡Œ
+	Input: nowinodeæ˜¯æ–‡ä»¶iNodeå·ï¼Œpathæ˜¯è¦å†™å…¥çš„ä¸»æœºè·¯å¾„
+	Output: æ— 
+	Return: æ— 
 */
 void CatWrite(unsigned int nowinode);
 /*
-	Description: ×·¼ÓĞ´·½Ê½´ò¿ªÎÄ¼ş£¬ÈôÖ®Ç°µÄÊı¾İ¿éÃ»ÓĞÓÃÍê£¬×·¼ÓµÄÄÚÈİÒ²²»»á½Ó×ÅĞ´¶øÊÇĞÂ¿ªÒ»¸ö´ÅÅÌ¿é
-	Input: nowinodeÊÇÎÄ¼şiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: è¿½åŠ å†™æ–¹å¼æ‰“å¼€æ–‡ä»¶ï¼Œè‹¥ä¹‹å‰çš„æ•°æ®å—æ²¡æœ‰ç”¨å®Œï¼Œè¿½åŠ çš„å†…å®¹ä¹Ÿä¸ä¼šæ¥ç€å†™è€Œæ˜¯æ–°å¼€ä¸€ä¸ªç£ç›˜å—
+	Input: nowinodeæ˜¯æ–‡ä»¶iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 
 
 void CopyHostToBuffer(string hostpath);
 /*
-	Description: ½«Òª¿½±´µÄÖ÷»úÎÄ¼ş·Åµ½»º³åÇøÖĞ
-	Input: hostpathÊÇÖ÷»úÎÄ¼şµÄÂ·¾¶
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†è¦æ‹·è´çš„ä¸»æœºæ–‡ä»¶æ”¾åˆ°ç¼“å†²åŒºä¸­
+	Input: hostpathæ˜¯ä¸»æœºæ–‡ä»¶çš„è·¯å¾„
+	Output: æ— 
+	Return: æ— 
 */
 void CopyBufferToLinux(unsigned int nowinode);
 /*
-	Description: ½«»º³åÇøµÄÊı¾İĞ´ÈëÎÄ¼şÏµÍ³,µ÷ÓÃ´Ëº¯ÊıÒª±£Ö¤iNodeºÍÊı¾İ¿é³ä×ã
-	Input: nowinodeÊÇÒªĞ´ÈëÎÄ¼şµÄiNodeºÅ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: å°†ç¼“å†²åŒºçš„æ•°æ®å†™å…¥æ–‡ä»¶ç³»ç»Ÿ,è°ƒç”¨æ­¤å‡½æ•°è¦ä¿è¯iNodeå’Œæ•°æ®å—å……è¶³
+	Input: nowinodeæ˜¯è¦å†™å…¥æ–‡ä»¶çš„iNodeå·
+	Output: æ— 
+	Return: æ— 
 */
 void CopyLinuxToLinux(unsigned int inode1, unsigned int inode2);
 /*
-	Description: ÎÄ¼şÏµÍ³ÄÚ²¿µÄ¶ş½øÖÆÎÄ¼ş¿½±´,µ÷ÓÃ´Ëº¯ÊıÒª±£Ö¤iNodeºÍÊı¾İ¿é³ä×ã
-	Input: inode1ÊÇ±»¿½±´µÄÎÄ¼şiNode£¬inode2ÊÇ¿½±´µÄÎÄ¼şiNode
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: æ–‡ä»¶ç³»ç»Ÿå†…éƒ¨çš„äºŒè¿›åˆ¶æ–‡ä»¶æ‹·è´,è°ƒç”¨æ­¤å‡½æ•°è¦ä¿è¯iNodeå’Œæ•°æ®å—å……è¶³
+	Input: inode1æ˜¯è¢«æ‹·è´çš„æ–‡ä»¶iNodeï¼Œinode2æ˜¯æ‹·è´çš„æ–‡ä»¶iNode
+	Output: æ— 
+	Return: æ— 
 */
 void CopyHost(string filename, string hostpath, unsigned int dirinode);
 /*
-	Description: °ÑÖ÷»úÂ·¾¶ÎªhostpathµÄÎÄ¼ş¸´ÖÆµ½iNodeÎªdirinodeµÄÄ¿Â¼ÖĞ
-	Input: filenameÊÇÖ÷»úÉÏµÄÎÄ¼şÃû£¬hostpathÊÇÖ÷»úÎÄ¼şµÄÂ·¾¶£¬ÊÇdirnodeÎÄ¼şÏµÍ³ÖĞÒª¿½±´½øÈ¥µÄÄ¿Â¼µÄiNodeºÅ
-	Output: ³É¹¦»òÊ§°ÜµÄÔ­Òò
-	Return: ÎŞ
+	Description: æŠŠä¸»æœºè·¯å¾„ä¸ºhostpathçš„æ–‡ä»¶å¤åˆ¶åˆ°iNodeä¸ºdirinodeçš„ç›®å½•ä¸­
+	Input: filenameæ˜¯ä¸»æœºä¸Šçš„æ–‡ä»¶åï¼Œhostpathæ˜¯ä¸»æœºæ–‡ä»¶çš„è·¯å¾„ï¼Œæ˜¯dirnodeæ–‡ä»¶ç³»ç»Ÿä¸­è¦æ‹·è´è¿›å»çš„ç›®å½•çš„iNodeå·
+	Output: æˆåŠŸæˆ–å¤±è´¥çš„åŸå› 
+	Return: æ— 
 */
 void CopyLxfs(string filename, unsigned int fileinode, unsigned int dirinode);
 /*
-	Description: LinuxFileSystemµÄÄÚ²¿¸´ÖÆ
-	Input: filenameÊÇ¶ş½øÖÆÎÄ¼şÃû£¬fileinodeÊÇ±»¿½±´ÎÄ¼şµÄiNodeºÅ£¬dirinodeÊÇÒª¿½±´½øÈ¥µÄÄ¿Â¼µÄiNodeºÅ
-	Output: ³É¹¦»òÊ§°ÜµÄÔ­Òò
-	Return: ÎŞ
+	Description: LinuxFileSystemçš„å†…éƒ¨å¤åˆ¶
+	Input: filenameæ˜¯äºŒè¿›åˆ¶æ–‡ä»¶åï¼Œfileinodeæ˜¯è¢«æ‹·è´æ–‡ä»¶çš„iNodeå·ï¼Œdirinodeæ˜¯è¦æ‹·è´è¿›å»çš„ç›®å½•çš„iNodeå·
+	Output: æˆåŠŸæˆ–å¤±è´¥çš„åŸå› 
+	Return: æ— 
 */
 
 
 void ChangeDir(string newpath);
 /*
-	Description: ¸Ä±äµ±Ç°¹¤×÷Ä¿Â¼
-	Input: newpathÊÇÒª¸Ä±ä³ÉµÄ¾ø¶ÔÂ·¾¶
-	Output: ³É¹¦»òÊ§°Ü
-	Return: ÎŞ
+	Description: æ”¹å˜å½“å‰å·¥ä½œç›®å½•
+	Input: newpathæ˜¯è¦æ”¹å˜æˆçš„ç»å¯¹è·¯å¾„
+	Output: æˆåŠŸæˆ–å¤±è´¥
+	Return: æ— 
 */
 bool Exist(unsigned int fathinode, string sonname);
 /*
-	Description: ÅĞ¶ÏÔÚiNodeºÅÎªfathinodeµÄÄ¿Â¼ÏÂÓĞÃ»ÓĞÃûÎªsonnameµÄÎÄ¼ş
-	Input: fathinodeÊÇÄ¿Â¼µÄiNodeºÅ£¬sonnameÊÇÎÄ¼ş£¨Ä¿Â¼»ò¶ş½øÖÆÎÄ¼ş£©µÄiNodeºÅ
-	Output: ÎŞ
-	Return: true´æÔÚ£¬false²»´æÔÚ
+	Description: åˆ¤æ–­åœ¨iNodeå·ä¸ºfathinodeçš„ç›®å½•ä¸‹æœ‰æ²¡æœ‰åä¸ºsonnameçš„æ–‡ä»¶
+	Input: fathinodeæ˜¯ç›®å½•çš„iNodeå·ï¼Œsonnameæ˜¯æ–‡ä»¶ï¼ˆç›®å½•æˆ–äºŒè¿›åˆ¶æ–‡ä»¶ï¼‰çš„iNodeå·
+	Output: æ— 
+	Return: trueå­˜åœ¨ï¼Œfalseä¸å­˜åœ¨
 */
 
 
 void ShowHelp();
 /*
-	Description: ÃüÁîÌáÊ¾
-	Input: ÎŞ
-	Output: ÎŞ
-	Return:ÎŞ
+	Description: å‘½ä»¤æç¤º
+	Input: æ— 
+	Output: æ— 
+	Return:æ— 
 */
 void ShowInfo();
 /*
-	Description: ÏÔÊ¾Õû¸öÏµÍ³ĞÅÏ¢
-	Input: ÎŞ
-	Output: ÎŞ
-	Return: ÎŞ
+	Description: æ˜¾ç¤ºæ•´ä¸ªç³»ç»Ÿä¿¡æ¯
+	Input: æ— 
+	Output: æ— 
+	Return: æ— 
 */
 void ShowDir(unsigned int nowdir);
 /*
-	Description: ÏÔÊ¾iNodeºÅÎªnowdirµÄÄ¿Â¼ĞÅÏ¢
-	Input: nowdirÊÇÄ¿Â¼µÄiNodeºÅ
-	Output: Ä¿Â¼ĞÅÏ¢
-	Return: ÎŞ
+	Description: æ˜¾ç¤ºiNodeå·ä¸ºnowdirçš„ç›®å½•ä¿¡æ¯
+	Input: nowdiræ˜¯ç›®å½•çš„iNodeå·
+	Output: ç›®å½•ä¿¡æ¯
+	Return: æ— 
 */
 void ShowDir(unsigned int nowdir, bool sonfile);
 /*
-	Description: ÏÔÊ¾iNodeÎªnowdirµÄÄ¿Â¼ĞÅÏ¢£¬°üÀ¨×ÓÄ¿Â¼Ãû
-	Input: nowdirÊÇÄ¿Â¼µÄiNodeºÅ£¬sonfile±íÊ¾ĞèÒªÏÔÊ¾×ÓÄ¿Â¼µÄĞÅÏ¢
-	Output: Ä¿Â¼ĞÅÏ¢
-	Return: ÎŞ
+	Description: æ˜¾ç¤ºiNodeä¸ºnowdirçš„ç›®å½•ä¿¡æ¯ï¼ŒåŒ…æ‹¬å­ç›®å½•å
+	Input: nowdiræ˜¯ç›®å½•çš„iNodeå·ï¼Œsonfileè¡¨ç¤ºéœ€è¦æ˜¾ç¤ºå­ç›®å½•çš„ä¿¡æ¯
+	Output: ç›®å½•ä¿¡æ¯
+	Return: æ— 
 */
 void ShowList();
 /*
-	Description: Êä³öµ±Ç°ÎÄ¼şÏµÍ³µÄËùÓĞÄ¿Â¼Óë¶ş½øÖÆÎÄ¼şĞÅÏ¢
-	Input: ÎŞ
-	Output: Ä¿Â¼ÓëÎÄ¼şĞÅÏ¢
-	Return: ÎŞ
+	Description: è¾“å‡ºå½“å‰æ–‡ä»¶ç³»ç»Ÿçš„æ‰€æœ‰ç›®å½•ä¸äºŒè¿›åˆ¶æ–‡ä»¶ä¿¡æ¯
+	Input: æ— 
+	Output: ç›®å½•ä¸æ–‡ä»¶ä¿¡æ¯
+	Return: æ— 
 */
 void ShowPath();
 /*
-	Description: Êä³öµ±Ç°Ä¿Â¼
-	Input: ÎŞ
-	Output: µ±Ç°Ä¿Â¼
-	Return: ÎŞ
+	Description: è¾“å‡ºå½“å‰ç›®å½•
+	Input: æ— 
+	Output: å½“å‰ç›®å½•
+	Return: æ— 
 */
-
 
 void Info();
 /*
-	¹¦ÄÜ1£ºinfoÃüÁî£¬ÏÔÊ¾Õû¸öÏµÍ³ĞÅÏ¢
-	¸ñÊ½£ºinfo
-	ËµÃ÷£ºÎŞ
+	åŠŸèƒ½1ï¼šinfoå‘½ä»¤ï¼Œæ˜¾ç¤ºæ•´ä¸ªç³»ç»Ÿä¿¡æ¯
+	æ ¼å¼ï¼šinfo
+	è¯´æ˜ï¼šæ— 
 */
 void Cd();
 /*
-	¹¦ÄÜ2£ºcdÃüÁî£¬¸Ä±äÄ¿Â¼
-	¸ñÊ½£ºcd path
-	ËµÃ÷£ºpath¿ÉÒÔÊÇÏà¶ÔÂ·¾¶»ò¾ø¶ÔÂ·¾¶
+	åŠŸèƒ½2ï¼šcdå‘½ä»¤ï¼Œæ”¹å˜ç›®å½•
+	æ ¼å¼ï¼šcd path
+	è¯´æ˜ï¼špathå¯ä»¥æ˜¯ç›¸å¯¹è·¯å¾„æˆ–ç»å¯¹è·¯å¾„
 */
 void Dir();
 /*
-	¹¦ÄÜ3£ºdirÃüÁî£¬ÏÔÊ¾Ä¿Â¼
-	¸ñÊ½£ºdir <path> <s>
-	ËµÃ÷£ºpath±íÊ¾Ö¸¶¨Â·¾¶£¬Ã»ÓĞpath±íÊ¾²é¿´µ±Ç°Ä¿Â¼
-	      s±íÊ¾ÏÔÊ¾ËùÓĞµÄ×ÓÄ¿Â¼£¬Ã»ÓĞs±íÊ¾²»ÏÔÊ¾
+	åŠŸèƒ½3ï¼šdirå‘½ä»¤ï¼Œæ˜¾ç¤ºç›®å½•
+	æ ¼å¼ï¼šdir <path> <s>
+	è¯´æ˜ï¼špathè¡¨ç¤ºæŒ‡å®šè·¯å¾„ï¼Œæ²¡æœ‰pathè¡¨ç¤ºæŸ¥çœ‹å½“å‰ç›®å½•
+	      sè¡¨ç¤ºæ˜¾ç¤ºæ‰€æœ‰çš„å­ç›®å½•ï¼Œæ²¡æœ‰sè¡¨ç¤ºä¸æ˜¾ç¤º
 */
 void Md();
 /*
-	¹¦ÄÜ4£ºmdÃüÁî£¬´´½¨Ä¿Â¼
-	¸ñÊ½£ºmd dirname <path>
-	ËµÃ÷£ºdirnameÊÇÄ¿Â¼Ãû
-	      pathÊÇÖ¸¶¨Â·¾¶ÏÂ´´½¨£¬Ã»ÓĞpathÊÇÔÚµ±Ç°Â·¾¶ÏÂ´´½¨
+	åŠŸèƒ½4ï¼šmdå‘½ä»¤ï¼Œåˆ›å»ºç›®å½•
+	æ ¼å¼ï¼šmd dirname <path>
+	è¯´æ˜ï¼šdirnameæ˜¯ç›®å½•å
+	      pathæ˜¯æŒ‡å®šè·¯å¾„ä¸‹åˆ›å»ºï¼Œæ²¡æœ‰pathæ˜¯åœ¨å½“å‰è·¯å¾„ä¸‹åˆ›å»º
 */
 void Rd();
 /*
-	¹¦ÄÜ5£ºrdÃüÁî£¬É¾³ıÄ¿Â¼
-	¸ñÊ½£ºrd path
-	ËµÃ÷£ºpath¿ÉÒÔÊÇ¾ø¶ÔÂ·¾¶»òÕßÏà¶ÔÂ·¾¶
+	åŠŸèƒ½5ï¼šrdå‘½ä»¤ï¼Œåˆ é™¤ç›®å½•
+	æ ¼å¼ï¼šrd path
+	è¯´æ˜ï¼špathå¯ä»¥æ˜¯ç»å¯¹è·¯å¾„æˆ–è€…ç›¸å¯¹è·¯å¾„
 */
 void Newfile();
 /*
-	¹¦ÄÜ6£ºnewfileÃüÁî£¬½¨Á¢ÎÄ¼ş
-	¸ñÊ½£ºnewfile filename <path>
-	ËµÃ÷£ºfilenameÊÇ¶ş½øÖÆÎÄ¼şÃû
-	      pathÊÇÖ¸¶¨Â·¾¶ÏÂ´´½¨£¬Ã»ÓĞpathÊÇÔÚµ±Ç°Â·¾¶ÏÂ´´½¨
+	åŠŸèƒ½6ï¼šnewfileå‘½ä»¤ï¼Œå»ºç«‹æ–‡ä»¶
+	æ ¼å¼ï¼šnewfile filename <path>
+	è¯´æ˜ï¼šfilenameæ˜¯äºŒè¿›åˆ¶æ–‡ä»¶å
+	      pathæ˜¯æŒ‡å®šè·¯å¾„ä¸‹åˆ›å»ºï¼Œæ²¡æœ‰pathæ˜¯åœ¨å½“å‰è·¯å¾„ä¸‹åˆ›å»º
 */
 void Cat();
 /*
-	¹¦ÄÜ7£ºcatÃüÁî£¬´ò¿ªÎÄ¼ş
-	¸ñÊ½£ºcat path <r,w>
-	ËµÃ÷£ºpath¿ÉÒÔÊÇÏà¶ÔÂ·¾¶»ò¾ø¶ÔÂ·¾¶
-	      r±íÊ¾Ö»¶Á´ò¿ª£¬w±íÊ¾×·¼ÓĞ´Èë´ò¿ª£¨ÒÔ»Ø³µ½áÊø£©
+	åŠŸèƒ½7ï¼šcatå‘½ä»¤ï¼Œæ‰“å¼€æ–‡ä»¶
+	æ ¼å¼ï¼šcat path <r,w>
+	è¯´æ˜ï¼špathå¯ä»¥æ˜¯ç›¸å¯¹è·¯å¾„æˆ–ç»å¯¹è·¯å¾„
+	      rè¡¨ç¤ºåªè¯»æ‰“å¼€ï¼Œwè¡¨ç¤ºè¿½åŠ å†™å…¥æ‰“å¼€ï¼ˆä»¥å›è½¦ç»“æŸï¼‰
 */
 void Copy();
 /*
-	¹¦ÄÜ8£ºcopyÃüÁî£¬¿½±´ÎÄ¼ş
-	¸ñÊ½£ºcopy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/zzz /aaa/bbb
-	ËµÃ÷£ºµÚÒ»¸ö0ÊÇÖ÷»úÎÄ¼ş¿½±´µ½ÎÄ¼şÏµÍ³
-		  µÚÒ»¸ö1ÊÇÎÄ¼şÏµÍ³¿½±´µ½Ö÷»úÎÄ¼ş
-	      µÚ¶ş¸öÊÇÎÄ¼şÏµÍ³Ö®¼ä¿½±´
+	åŠŸèƒ½8ï¼šcopyå‘½ä»¤ï¼Œæ‹·è´æ–‡ä»¶
+	æ ¼å¼ï¼šcopy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> æˆ– copy<lxfs> /xxx/yyy/zzz /aaa/bbb
+	è¯´æ˜ï¼šç¬¬ä¸€ä¸ª0æ˜¯ä¸»æœºæ–‡ä»¶æ‹·è´åˆ°æ–‡ä»¶ç³»ç»Ÿ
+		  ç¬¬ä¸€ä¸ª1æ˜¯æ–‡ä»¶ç³»ç»Ÿæ‹·è´åˆ°ä¸»æœºæ–‡ä»¶
+	      ç¬¬äºŒä¸ªæ˜¯æ–‡ä»¶ç³»ç»Ÿä¹‹é—´æ‹·è´
 */
 void Del();
 /*
-	¹¦ÄÜ9£ºdelÃüÁî£¬É¾³ıÎÄ¼ş
-	¸ñÊ½£ºdel path
-	ËµÃ÷£ºpath¿ÉÒÔÊÇ¾ø¶ÔÂ·¾¶»òÕßÏà¶ÔÂ·¾¶
+	åŠŸèƒ½9ï¼šdelå‘½ä»¤ï¼Œåˆ é™¤æ–‡ä»¶
+	æ ¼å¼ï¼šdel path
+	è¯´æ˜ï¼špathå¯ä»¥æ˜¯ç»å¯¹è·¯å¾„æˆ–è€…ç›¸å¯¹è·¯å¾„
 */
 void Check();
 /*
-	¹¦ÄÜ10£ºcheckÃüÁî£¬¼ì²â²¢»Ö¸´ÎÄ¼şÏµÍ³
-	¸ñÊ½£ºcheck
-	ËµÃ÷£ºÎŞ
+	åŠŸèƒ½10ï¼šcheckå‘½ä»¤ï¼Œæ£€æµ‹å¹¶æ¢å¤æ–‡ä»¶ç³»ç»Ÿ
+	æ ¼å¼ï¼šcheck
+	è¯´æ˜ï¼šæ— 
 */
 void Ls();
 /*
-	¹¦ÄÜ11£ºlsÃüÁî£¬ÏÔÊ¾ËùÓĞÄ¿Â¼ºÍ¶ş½øÖÆÎÄ¼şĞÅÏ¢
-	¸ñÊ½£ºls
-	ËµÃ÷£ºÎŞ
+	åŠŸèƒ½11ï¼šlså‘½ä»¤ï¼Œæ˜¾ç¤ºæ‰€æœ‰ç›®å½•å’ŒäºŒè¿›åˆ¶æ–‡ä»¶ä¿¡æ¯
+	æ ¼å¼ï¼šls
+	è¯´æ˜ï¼šæ— 
 */
 
 #endif

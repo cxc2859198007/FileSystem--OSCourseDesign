@@ -16,8 +16,11 @@ void FindOrder(Order& ord) {//ÕÒÊäÈëµÄÃüÁîµÄº¬Òå
 	ord.clear();
 	
 	//step2: °´¿Õ¸ñ·Ö½âÊäÈëÃüÁî×Ö·û´®
-	while (cin >> ord.od[ord.cnt++]) {
-		if (cin.get() == '\n') break;
+	ReadShareMemory();
+	
+	ord.cnt = smi.cnt;
+	for (int i = 0; i < ord.cnt; i++) {
+		ord.od[i] = smi.str[i];
 	}
 
 	//step3: ¸ù¾ÝµÚÒ»¸ö×Ö·û´®È·¶¨ÃüÁîµÄÀàÐÍ£¬Èç¹ûÓÐÎó£¬ÀàÐÍÎªINF
@@ -182,7 +185,58 @@ void ReadBlock(unsigned int pos, Block& bk) {//¶ÁÈ¡ÏÂ±êÎªposµÄ´ÅÅÌ¿éÐÅÏ¢
 	f.close();
 	return;
 }
+void ReadShareMemory() {//¶ÁÈ¡Ò»ÐÐ¹²ÏíÄÚ´æÖÐµÄÊý¾Ý
+	//Í¨Öªshell¶ËÏ£ÍûÄÜÊäÈëÊý¾Ý
+	pBufIoo->toshell = 1;
 
+	//»ñÈ¡
+	while (true) {//µÈ´ýÊäÈë
+		if (pBufIoo->tosimdisk == 1) {//shell¶ËÍ¨ÖªÒªÊäÈëµÄÊý¾ÝÒÑÈ«²¿·ÅÈë¹²ÏíÄÚ´æ
+			// ´ò¿ªÃüÃû¹²ÏíÄÚ´æ
+			hMapFileIn = OpenFileMapping(
+				FILE_MAP_READ,
+				FALSE,
+				NameIn);
+			if (hMapFileIn == NULL) {
+				int error = GetLastError();
+				_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+				return;
+			}
+
+			// Ó³Éä¶ÔÏóµÄÒ»¸öÊÓÍ¼£¬µÃµ½Ö¸Ïò¹²ÏíÄÚ´æµÄÖ¸Õë£¬»ñÈ¡ÀïÃæµÄÊý¾Ý
+			pBufIn = (ShareMemory*)MapViewOfFile(hMapFileIn,
+				FILE_MAP_READ,
+				0,
+				0,
+				BUF_SIZE);
+			if (pBufIn == NULL) {
+				int error = GetLastError();
+				_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+				CloseHandle(hMapFileIn);
+				return;
+			}
+
+			//½«Êý¾Ý·ÅÈë¶ÔÏó
+			smi.cnt = pBufIn->cnt;
+			for (int i = 0; i < 20; i++) {
+				for (int j = 0; j < 300; j++) {
+					smi.str[i][j] = pBufIn->str[i][j];
+				}
+			}
+
+			break;
+		}
+	}
+
+	//Í¨Öªshell¶ËÊý¾ÝÒÑ¶ÁÈëÍê³É£¬ÏÂÃæ¼È²»ÒªÊäÈëÒ²²»ÒªÊä³ö
+	pBufIoo->toshell = 0;
+	
+	UnmapViewOfFile(pBufIn);
+	CloseHandle(hMapFileIn);
+
+	Sleep(10);
+	return;
+}
 
 void WriteFileSystem() {//½«³¬¼¶¿é¡¢×éÃèÊö·û¡¢¿éÎ»Í¼¡¢iNodeÎ»Í¼¡¢iNode±íÐ´»ØÎÄ¼þÏµÍ³
 	//step1: ´ò¿ªÎÄ¼þÏµÍ³µÄ¶þ½øÖÆÎÄ¼þ,ÒÆ¶¯Ð´Ö¸Õë
@@ -216,7 +270,70 @@ void WriteBlock(unsigned int pos, Block& bk) {//½«bk¿é¸²¸ÇÐ´µ½ÏÂ±êÎªposµÄ´ÅÅÌ¿éÖ
 	f.close();
 	return;
 }
+void WriteShareMemory() {//ÏòÊäÈë¹²ÏíÄÚ´æ´æ·ÅÒ»ÐÐÊý¾Ý
+	//´´½¨¹²ÏíÎÄ¼þ
+	hMapFileOut = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		BUF_SIZE,
+		NameOut);
+	if (hMapFileOut == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+		return;
+	}
 
+	// Ó³Éä¶ÔÏóµÄÒ»¸öÊÓÍ¼£¬µÃµ½Ö¸Ïò¹²ÏíÄÚ´æµÄÖ¸Õë£¬ÉèÖÃÀïÃæµÄÊý¾Ý
+	pBufOut = (ShareMemory*)MapViewOfFile(hMapFileOut,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufOut == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+		CloseHandle(hMapFileOut);
+		return;
+	}
+
+	//Çå¿Õ»º³åÇø
+	pBufOut->cnt = 0;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 300; j++) {
+			pBufOut->str[i][j] = '\0';
+		}
+	}
+
+	//»ñÈ¡ÄÚÈÝ£¬Ð´Èë¹²ÏíÄÚ´æ
+	pBufOut->cnt = smo.cnt;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 300; j++) {
+			pBufOut->str[i][j] = smo.str[i][j];
+		}
+	}
+	
+	//Í¨Öªshell¶ËÏ£ÍûÄÜ°Ñ¹²ÏíÄÚ´æÖÐµÄÊý¾ÝÊä³ö
+	pBufIoo->toshell = 2;
+	
+	//µÈshell¶ËÈ«²¿Êä³ö
+	while (true) {
+		if (pBufIoo->tosimdisk == 2) {//shell¶ËÍ¨ÖªÒÑ°Ñ¹²ÏíÄÚ´æÖÐµÄÊý¾ÝÈ«²¿Êä³ö
+			pBufIoo->toshell = 0;//Í¨Öªshell¶ËÏÖÔÚ¼È²»ÒªÊäÈëÒ²²»ÒªÊä³ö
+			break;
+		}
+	}
+	
+	//Çå¿Õ¶ÔÏó
+	smo.clear();
+
+	UnmapViewOfFile(pBufOut);
+	CloseHandle(hMapFileOut);
+
+	Sleep(10);
+	return;
+}
 
 void CreateFileSystem() {//´´½¨ÎÄ¼þÏµÍ³
 	//step1: ´ò¿ª¶þ½øÖÆÎÄ¼þ
@@ -498,7 +615,6 @@ void RemoveDir(unsigned int nowinode) {//É¾³ýiNodeÎªnowinodeµÄÄ¿Â¼
 
 void CatRead(unsigned int nowinode) {
 	Block db;
-	int cnt = 0;//ÓÃ»§¿ØÖÆ»»ÐÐ
 	for (;;) {
 		//step1: Ã¶¾Ùµ±Ç°iNodeÏÂËùÓÐ¿éµÄÊý¾Ý
 		for (int i = 0; i < inodetb.inode[nowinode].block_num; i++) {
@@ -514,13 +630,10 @@ void CatRead(unsigned int nowinode) {
 				if (c1 == '\0' && c2 == '\0' && c3 == '\0' && c4 == '\0') {//Á¬Ðø4¸ö¿Õ¸ñ±íÊ¾ÄÚÈÝ½áÊø
 					break;
 				}
-				if (cnt == 0) cout << "  ";
-				cout << c1 << c2 << c3 << c4;
-				cnt = cnt + 1;
-				if (cnt % 20 == 0) {
-					cout << endl;
-					cout << "  ";
-				}
+				
+				smo.cnt = 1;
+				smo.str[0][0] = c1; smo.str[0][1] = c2; smo.str[0][2] = c3; smo.str[0][3] = c4;
+				WriteShareMemory();
 			}
 		}
 
@@ -528,7 +641,10 @@ void CatRead(unsigned int nowinode) {
 		if (inodetb.inode[nowinode].next_pos == INF) break;
 		nowinode = inodetb.inode[nowinode].next_pos;
 	}
-	cout << endl;
+	smo.cnt = 1;
+	smo.str[0][0] = '\n';
+	WriteShareMemory();
+	
 	return;
 }
 void CatReadToHost(unsigned int nowinode, string path) {
@@ -564,10 +680,17 @@ void CatReadToHost(unsigned int nowinode, string path) {
 }
 void CatWrite(unsigned int nowinode) {
 	//step1: ¶ÁÈëÒ»ÐÐ×Ö·û´®
+	smo.cnt = 1;
+	smo.str[0][0] = '\0'; smo.str[0][1] = '\0';
+	WriteShareMemory();
+
 	string str;
-	cout << "  ";
-	getline(cin, str);
-	
+	ReadShareMemory();
+	for (int i = 0; i < smi.cnt - 1; i++) {
+		str = str + smi.str[i] + " ";
+	}
+	str = str + smi.str[smi.cnt - 1];
+
 	//step2: ÅÐ¶ÏiNode»òÕßÊý¾Ý¿é¹»²»¹»
 	unsigned int Size = sizeof(str);
 	unsigned int needblock = 0, needinode = 0;
@@ -576,11 +699,17 @@ void CatWrite(unsigned int nowinode) {
 	needinode = needblock / 17;
 	if (needblock % 17 != 0) needinode++;
 	
-	if (superblock.use_datablock + needblock > superblock.tot_datablock) {
-		cout << "  Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_datablock + needblock > superblock.tot_datablock) {//Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  Datablock has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
-	if (superblock.use_inode + needinode > superblock.tot_inode) {
-		cout << "  iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_inode + needinode > superblock.tot_inode) {//iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  iNode has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
 
 	//step3: ½«×Ö·û´®²¹³É4µÄÕûÊý±¶£¬·½±ãÐ´Èë»º³åÇø
@@ -607,7 +736,10 @@ void CatWrite(unsigned int nowinode) {
 
 	//step4: ½«»º³åÇø×·¼ÓÐ´ÈëÎÄ¼þÏµÍ³
 	CopyBufferToLinux(nowinode);
-	cout << "  Ð´Èë³É¹¦£¡" << endl;
+	string tmps = "  CatWrite order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 	
 	//step5: ¸üÐÂÎÄ¼þÏµÍ³Êý¾Ý
 	WriteFileSystem();
@@ -712,11 +844,17 @@ void CopyHost(string filename, string hostpath, unsigned int dirinode) {//°ÑÖ÷»ú
 	unsigned int needinode = needblock / 17;
 	if (needblock % 17 != 0) needinode++;
 
-	if (superblock.use_datablock + needblock > superblock.tot_datablock) {
-		cout << "  Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_datablock + needblock > superblock.tot_datablock) {//Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  Datablock has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
-	if (superblock.use_inode + needinode > superblock.tot_inode) {
-		cout << "  iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_inode + needinode > superblock.tot_inode) {//iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  iNode has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
 	
 	//step3: ÔÚdirinodeÏÂÐÂ½¨Ò»¸öÎÄ¼þ
@@ -724,7 +862,10 @@ void CopyHost(string filename, string hostpath, unsigned int dirinode) {//°ÑÖ÷»ú
 
 	//step4: ½«»º³åÇøµÄ¿é·ÅÈëÎÄ¼þÏµÍ³
 	CopyBufferToLinux(nowinode);
-	cout << "  ¿½±´³É¹¦£¡" << endl;
+	string tmps = "  CopyHost order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 
 	//step5: ¸üÐÂÎÄ¼þÏµÍ³Êý¾Ý
 	WriteFileSystem();
@@ -768,19 +909,28 @@ void CopyLxfs(string filename, unsigned int fileinode, unsigned int dirinode) {/
 		nowinode = inodetb.inode[nowinode].next_pos;
 	}
 
-	if (superblock.use_datablock + needblock > superblock.tot_datablock) {
-		cout << "  Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_datablock + needblock > superblock.tot_datablock) {//Êý¾Ý¿éÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  Datablock has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
-	if (superblock.use_inode + needinode > superblock.tot_inode) {
-		cout << "  iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü£¡" << endl;
+	if (superblock.use_inode + needinode > superblock.tot_inode) {//iNodeÊýÁ¿²»×ã£¬¿½±´Ê§°Ü
+		string tmps = "  iNode has been used up, copy failed!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
 
 	//step2: ÔÚdirinodeÏÂÐÂ½¨Ò»¸öÎÄ¼þ
 	nowinode = CreateNewFile(dirinode, filename);
 
 	//step3: ¸´ÖÆ
-	 CopyLinuxToLinux(fileinode, nowinode);
-	 cout << "  ¿½±´³É¹¦£¡" << endl;
+	CopyLinuxToLinux(fileinode, nowinode);
+	string tmps = "  CopyLxfs order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 
 	//step4: ¸üÐÂÎÄ¼þÏµÍ³Êý¾Ý
 	WriteFileSystem();
@@ -793,10 +943,16 @@ void ChangeDir(string newpath) {//¸Ä±äµ±Ç°¹¤×÷Ä¿Â¼£¬newpathÊÇ¾ø¶ÔÂ·¾¶
 	unsigned int x = FindFileINode(newpath);
 	if (x != INF) {
 		CurrentPath = x;
-		cout << "  µ±Ç°Ä¿Â¼¸ü¸Ä³É¹¦£¡" << endl;
+		string tmps = "  ChangeDir order executed successfully!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
 	else {
-		cout << "  µ±Ç°Ä¿Â¼¸ü¸ÄÊ§°Ü£¡" << endl;
+		string tmps = "  ChangeDir order executed unsuccessfully!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 	}
 }
 bool Exist(unsigned int fathinode, string sonname) {//ÅÐ¶ÏÔÚiNodeºÅÎªfathinodeµÄÄ¿Â¼ÏÂÓÐÃ»ÓÐÃûÎªsonnameµÄÎÄ¼þ
@@ -808,78 +964,122 @@ bool Exist(unsigned int fathinode, string sonname) {//ÅÐ¶ÏÔÚiNodeºÅÎªfathinodeµÄ
 
 
 void ShowHelp() {//ÃüÁîÌáÊ¾
-	cout << "************************Linux ext2ÎÄ¼þÏµÍ³************************" << endl << endl;
-	cout << "    info                                       ÏÔÊ¾Õû¸öÏµÍ³ÐÅÏ¢" << endl;
-	cout << "    cd path                                    ¸Ä±äÄ¿Â¼" << endl;
-	cout << "    dir <path> <s>                             ÏÔÊ¾Ä¿Â¼" << endl;
-	cout << "    md dirname <path>                          ´´½¨Ä¿Â¼" << endl;
-	cout << "    rd path                                    É¾³ýÄ¿Â¼" << endl;
-	cout << "    newfile filename <path>                    ½¨Á¢ÎÄ¼þ" << endl;
-	cout << "    cat path <r,w>                             ´ò¿ªÎÄ¼þ" << endl;
-	cout << "    copy<host> D:\\xxx\\yyy\\zzz /aaa/bbb         ¿½±´Ö÷»úÎÄ¼þ" << endl;
-	cout << "    copy<lxfs> /xxx/yyy/zzz /aaa/bbb           ¿½±´ÄÚ²¿ÎÄ¼þ" << endl;
-	cout << "    del path                                   É¾³ýÎÄ¼þ" << endl;
-	cout << "    check                                      ¼ì²â²¢»Ö¸´ÎÄ¼þÏµÍ³" << endl;
-	cout << endl;
+	string tmps[20]; 
+	tmps[0] =  "***************************Linux ext2 FileSystem***************************\n\n";
+	tmps[1] =  "    info                                          Show FileSystem Information\n";
+	tmps[2] =  "    cd path                                       Change Directory\n";
+	tmps[3] =  "    dir <path> <s>                                Show Directory\n";
+	tmps[4] =  "    md dirname <path>                             Create Directory\n";
+	tmps[5] =  "    rd path                                       Remove Directory\n";
+	tmps[6] =  "    newfile filename <path>                       Create File\n";
+	tmps[7] =  "    cat path <r,w>                                Open File\n";
+	tmps[8] =  "    copy<host> HostPath LinuxPath <0,1>           Copy Host File\n";
+	tmps[9] =  "    copy<lxfs> LinuxPath1 LinuxPath2              Copy Linux File\n";
+	tmps[10] = "    del path                                      Delete File\n";
+	tmps[11] = "    check                                         Check&Recovery System\n";
+	tmps[12] = "    ls                                            Show File List\n";
+	tmps[13] = "\n";
+	
+	smo.cnt = 14;
+	for (int i = 0; i < 14; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
 
 	return;
 }
 void ShowInfo() {//ÏÔÊ¾Õû¸öÏµÍ³ÐÅÏ¢
-	cout << "************************Linux ext2ÎÄ¼þÏµÍ³************************" << endl << endl;
-	cout << "ÎÄ¼þÏµÍ³½á¹¹ÐÅÏ¢£º" << endl;
-	cout << "    ×Ü´ÅÅÌ´óÐ¡£º               " << "102400KB  100MB" << endl;
-	cout << "    ´ÅÅÌ¿é´óÐ¡£º               " << superblock.block_size << "B" << endl;
-	cout << "    i½Úµã´óÐ¡£º                " << superblock.inode_size << "B" << endl;
-	cout << "    ´ÅÅÌ·Ö×é¸öÊý£º             " << "1" << endl;
-	cout << "    ×Ü´ÅÅÌ¿éÊý£º               " << superblock.tot_block << endl;
-	cout << "    Òýµ¼¿éÕ¼ÓÃµÄ´ÅÅÌ¿éÊý£º     " << groupdes.super_begin << endl;
-	cout << "    ³¬¼¶¿éÕ¼ÓÃµÄ´ÅÅÌ¿éÊý£º     " << groupdes.super_end - groupdes.super_begin + 1 << endl;
-	cout << "    ×éÃèÊö·ûÕ¼ÓÃµÄ´ÅÅÌ¿éÊý£º   " << groupdes.groupdes_end - groupdes.groupdes_begin + 1 << endl;
-	cout << "    ¿éÎ»Í¼Õ¼ÓÃµÄ´ÅÅÌ¿éÊý£º     " << groupdes.blockbm_end - groupdes.blockbm_begin + 1 << endl;
-	cout << "    i½ÚµãÎ»Í¼Õ¼ÓÃµÄ´ÅÅÌ¿éÊý£º  " << groupdes.inodebm_end - groupdes.inodebm_begin + 1 << endl;
-	cout << "    i½Úµã±íÕ¼ÓÃµÄ´ÅÅÌ¿éÊý£º    " << groupdes.inodetb_end - groupdes.inodetb_begin + 1 << endl;
-	cout << "    Êý¾Ý¿éÕ¼ÓÃµÄ´ÅÅÌ¿éÊý£º     " << groupdes.data_end - groupdes.data_begin + 1 << endl;
-	cout << endl;
+	string tmps[30];
+	tmps[0] =  "************************Linux ext2 FileSystem************************\n\n";
+	tmps[1] =  "Information:\n";
+	tmps[2] =  "    Total Disk Size:                          100MB\n";
+	tmps[3] =  "    Block Size:                               " + to_string(superblock.block_size) + "B\n";
+	tmps[4] =  "    iNode Size:                               " + to_string(superblock.inode_size) + "B\n";
+	tmps[5] =  "    Group Number:                             1\n";
+	tmps[6] =  "    Total Blocks Number:                      " + to_string(superblock.tot_block) + "\n";
+	tmps[7] =  "    BootBlock Blocks Number:                  " + to_string(groupdes.super_begin) + "\n";
+	tmps[8] =  "    SuperBlock Blocks Number:                 " + to_string(groupdes.super_end - groupdes.super_begin + 1) + "\n";
+	tmps[9] =  "    GroupDescriptionBlock Block Number:       " + to_string(groupdes.groupdes_end - groupdes.groupdes_begin + 1) + "\n";
+	tmps[10] = "    DataBlockBitMap Blocks Number:            " + to_string(groupdes.blockbm_end - groupdes.blockbm_begin + 1) + "\n";
+	tmps[11] = "    iNodeBitMap Blocks Number:                " + to_string(groupdes.inodebm_end - groupdes.inodebm_begin + 1) + "\n";
+	tmps[12] = "    iNodeTable Blocks Number:                 " + to_string(groupdes.inodetb_end - groupdes.inodetb_begin + 1) + "\n";
+	tmps[13] = "    DataBlock Blocks Number:                  " + to_string(groupdes.data_end - groupdes.data_begin + 1) + "\n";
+	tmps[14] = "\n";
+	tmps[15] = "    Used iNode Number:                        " + to_string(superblock.use_inode) + "\n";
+	tmps[16] = "    Used DataBlock Number:                    " + to_string(superblock.use_datablock) +  "\n";
+	tmps[17] = "\n";
 
-	cout << "ÎÄ¼þÏµÍ³Ê¹ÓÃÐÅÏ¢£º         " << endl;
-	cout << "    ÒÑÊ¹ÓÃiNode¸öÊý£º          " << superblock.use_inode << endl;
-	cout << "    ÒÑÊ¹ÓÃÊý¾Ý¿é¸öÊý£º         " << superblock.use_datablock <<  endl;
-	cout << endl;
+	smo.cnt = 18;
+	for (int i = 0; i < 18; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
+	
 
 	return;
 }
 void ShowDir(unsigned int nowdir) {//ÏÔÊ¾iNodeºÅÎªnowdirµÄÄ¿Â¼ÐÅÏ¢
-	cout << "    Ä¿Â¼Ãû£º    " << inodetb.inode[nowdir].name << endl;
-	cout << "    ÎïÀíµØÖ·£º  " << groupdes.data_begin + inodetb.inode[nowdir].block_pos[0] << endl;
-	cout << "    ÎÄ¼þ³¤¶È£º  " << "128B + 1024B = 1152B" << endl;
-	cout << endl;
-
+	string tmps[10];
+	tmps[0] = "   Directory Name:    " + string(inodetb.inode[nowdir].name) + "\n";
+	tmps[1] = "   Block Position:    " + to_string(groupdes.data_begin + inodetb.inode[nowdir].block_pos[0]) + "\n";
+	tmps[2] = "   File Length:       128B(iNode) + 1024B(DataBlock) = 1152B\n\n";
+	
+	smo.cnt = 3;
+	for (int i = 0; i < 3; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
+	
 	CurrentPath = nowdir;
 
 	return;
 }
 void ShowDir(unsigned int nowdir, bool sonfile) {//ÏÔÊ¾iNodeÎªnowdirµÄÄ¿Â¼ÐÅÏ¢£¬°üÀ¨×ÓÄ¿Â¼Ãû
-	cout << "    Ä¿Â¼Ãû£º          " << inodetb.inode[nowdir].name << endl;
-	cout << "    ÎïÀíµØÖ·£º        " << groupdes.data_begin + inodetb.inode[nowdir].block_pos[0] << endl;
-	cout << "    ÎÄ¼þ³¤¶È£º        " << "128B + 1024B = 1152B" << endl;
+	string tmps[10];
+	tmps[0] = "    Directory Name:          " + string(inodetb.inode[nowdir].name) + "\n";
+	tmps[1] = "    Block Position:          " + to_string(groupdes.data_begin + inodetb.inode[nowdir].block_pos[0]) + "\n";
+	tmps[2] = "    File Length:             128B + 1024B = 1152B\n";
+	
+	smo.cnt = 3;
+	for (int i = 0; i < 3; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
+	
 
 	unsigned int blockpos = inodetb.inode[nowdir].block_pos[0];
 	blockpos = groupdes.data_begin + blockpos;
 	Block db;
 	ReadBlock(blockpos, db);
 
-	cout << "    ¹²ÓÐ×ÓÄ¿Â¼»ò×ÓÎÄ¼þ¸öÊý£º  " << inodetb.inode[nowdir].files_num << endl;
-	cout << "    ×ÓÄ¿Â¼µÄÄ¿Â¼Ãû£º  ";
+	tmps[0] = "    SubDirectory/SubFile Number:    " + to_string(inodetb.inode[nowdir].files_num) + "\n";
+	tmps[1] = "    SubDirectory Name:  ";
+	smo.cnt = 2;
+	for (int i = 0; i < 2; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
+	
+
 	for (int i = 0; i < inodetb.inode[nowdir].files_num; i++) {
 		unsigned int nowfile = db.data[i];
 		if (inodetb.inode[nowfile].type == 0) {
-			cout << inodetb.inode[nowfile].name << " <DIR>   ";
+			tmps[0] = string(inodetb.inode[nowfile].name) + " <DIR>   ";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 		}
 		else {
-			cout << inodetb.inode[nowfile].name << " <FILE>   ";
+			tmps[0] = string(inodetb.inode[nowfile].name) + " <FILE>   ";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 		}
 	}
-	cout << endl << endl;
+	tmps[0] = "\n\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps[0].c_str());
+	WriteShareMemory();
 
 	CurrentPath = nowdir;
 
@@ -890,8 +1090,13 @@ void ShowList() {
 	while (!qdirinode.empty()) qdirinode.pop();
 	qdirinode.push(RootDir);
 
-	cout.setf(ios::left);
-	cout << "  " << setw(15) << "Ä¿Â¼/ÎÄ¼þÃû" << setw(15) << "ÉÏ¼¶Ä¿Â¼Ãû" << setw(10) << "ÀàÐÍ" << setw(12) << "´óÐ¡(¿é)" << setw(10) << "×ÓÄ¿Â¼/×ÓÎÄ¼þ" << endl;
+	char tmps[10][300]; 
+	memset(tmps, '\0', sizeof(tmps));
+	sprintf_s(tmps[0], "  %-25s%-22s%-10s%-12s%-25s\n", "Directory/File Name", "Parent Directory", "Type", "Blocks", "SubDirectory/SubFile");
+	smo.cnt = 1;
+	for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+	WriteShareMemory();
+
 	while (!qdirinode.empty()) {
 		unsigned int nowinode = qdirinode.front();
 		unsigned int fathinode = inodetb.inode[nowinode].last_pos;
@@ -899,26 +1104,56 @@ void ShowList() {
 
 		if (inodetb.inode[nowinode].type == 0) {//Ä¿Â¼ÎÄ¼þ
 			
-			if (nowinode == RootDir)//¸ùÄ¿Â¼
-				cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << " " << setw(10) << "<DIR>" << setw(12) << 1;
-			else
-				cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << inodetb.inode[fathinode].name << setw(10) << "<DIR>" << setw(12) << 1;
-
+			if (nowinode == RootDir) {//¸ùÄ¿Â¼
+				memset(tmps[0], '\0', sizeof(tmps[0]));
+				sprintf_s(tmps[0], "  %-25s%-22s%-10s%-12s", inodetb.inode[nowinode].name, " ", "<DIR>", "1");
+				smo.cnt = 1;
+				for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+				WriteShareMemory();
+			}
+			else {
+				memset(tmps[0], '\0', sizeof(tmps[0]));
+				sprintf_s(tmps[0], "  %-25s%-22s%-10s%-12s", inodetb.inode[nowinode].name, inodetb.inode[fathinode].name, "<DIR>", "1");
+				smo.cnt = 1;
+				for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+				WriteShareMemory();
+			}
 			unsigned int blockpos = inodetb.inode[nowinode].block_pos[0];
 			blockpos = groupdes.data_begin + blockpos;
 			ReadBlock(blockpos, db);
 			for (int i = 0, cnt = 0; i < inodetb.inode[nowinode].files_num; i++, cnt++) {
 				unsigned int soninode = db.data[i];
 				qdirinode.push(soninode);
-				if (cnt == 0)
-					cout << setw(15) << inodetb.inode[soninode].name << endl;
-				else 
-					cout << setw(54)<<" " << inodetb.inode[soninode].name << endl;
+				if (cnt == 0) {
+					memset(tmps[0], '\0', sizeof(tmps[0]));
+					sprintf_s(tmps[0], "%-12s\n", inodetb.inode[soninode].name);
+					smo.cnt = 1;
+					for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+					WriteShareMemory();
+				}
+				else {
+					memset(tmps[0], '\0', sizeof(tmps[0]));
+					sprintf_s(tmps[0], "%-71s%s\n", " ", inodetb.inode[soninode].name);
+					smo.cnt = 1;
+					for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+					WriteShareMemory();
+				}
 			}
-			if (inodetb.inode[nowinode].files_num == 0) cout << endl;
+			if (inodetb.inode[nowinode].files_num == 0) {
+				memset(tmps[0], '\0', sizeof(tmps[0]));
+				tmps[0][0] = '\n';
+				smo.cnt = 1;
+				for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+				WriteShareMemory();
+			}
 		}
 		else {//ÆÕÍ¨¶þ½øÖÆÎÄ¼þ
-			cout << "  " << setw(15) << inodetb.inode[nowinode].name << setw(15) << inodetb.inode[fathinode].name << setw(10) << "<FILE>";
+			memset(tmps[0], '\0', sizeof(tmps[0]));
+			sprintf_s(tmps[0], "  %-25s%-22s%-10s", inodetb.inode[nowinode].name, inodetb.inode[fathinode].name, "<FILE>");
+			smo.cnt = 1;
+			for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+			WriteShareMemory();
+
 			unsigned int blocknum = 0;
 			unsigned int tmpinode = nowinode;
 			for (;;) {
@@ -926,16 +1161,25 @@ void ShowList() {
 				if (inodetb.inode[tmpinode].next_pos == INF) break;
 				tmpinode = inodetb.inode[tmpinode].next_pos;
 			}
-			cout << setw(12) << blocknum << endl;
+			memset(tmps[0], '\0', sizeof(tmps[0]));
+			_itoa_s(blocknum, tmps[0], 10);
+			sprintf_s(tmps[0], "%-12s\n", tmps[0]);
+			smo.cnt = 1;
+			for (int i = 0; i < 300; i++) smo.str[0][i] = tmps[0][i];
+			WriteShareMemory();
 		}
-
 	}
 
 	return;
 }
 void ShowPath() {
 	string str = inodetb.inode[CurrentPath].name;
-	cout << "  " << str << ">$ ";
+	str = "  " + str + ">$ ";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], str.c_str());
+	WriteShareMemory();
+
+	return;
 }
 
 
@@ -958,14 +1202,26 @@ void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 		else {//Ö¸¶¨Ä¿Â¼£¬²»ÏÔÊ¾×ÓÄ¿Â¼
 			FindAbsolutePath(order.od[1]);
 			unsigned int inode = FindFileINode(order.od[1]);
-			if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬²é¿´Ê§°Ü£¡" << endl;
+			if (inode == INF) {
+				string tmps;
+				tmps = "  Failed: The path is not exist!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
 			else ShowDir(inode);
 		}
 	}
 	else if (order.cnt == 3) {//Ö¸¶¨Ä¿Â¼£¬ÏÔÊ¾×ÓÄ¿Â¼
 		FindAbsolutePath(order.od[1]);
 		unsigned int inode = FindFileINode(order.od[1]);
-		if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬²é¿´Ê§°Ü£¡" << endl;
+		if (inode == INF) {
+			string tmps;
+			tmps = "  Failed: The path is not exist!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
 		else ShowDir(inode, true);
 	}
 	return;
@@ -973,7 +1229,11 @@ void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 void Md() {//md dirname »ò md dirname path
 	if (order.cnt == 2) {//md dirname ÔÚµ±Ç°Ä¿Â¼ÏÂÐÂ½¨Ä¿Â¼
 		if (Exist(CurrentPath, order.od[1]) == true) {
-			cout << "  ¸ÃÄ¿Â¼ÒÑ´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+			string tmps;
+			tmps = "  Failed: The Directory already existed!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
 			return;
 		}
 		CreateNewDir(CurrentPath, order.od[1]);
@@ -981,27 +1241,50 @@ void Md() {//md dirname »ò md dirname path
 	else {//md dirname path ÔÚpathËùÔÚµÄÄ¿Â¼ÏÂÐÂ½¨Ä¿Â¼
 		FindAbsolutePath(order.od[2]);
 		unsigned int inode = FindFileINode(order.od[2]);
-		if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+		if (inode == INF) {
+			string tmps;
+			tmps = "  Failed: The path is not exist!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
 		else {
 			if (Exist(inode, order.od[1]) == true) {
-				cout << "  ¸ÃÄ¿Â¼ÒÑ´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+				string tmps;
+				tmps = "  Failed: The Directory already existed!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
 				return;
 			}
 			CreateNewDir(inode, order.od[1]);
 		}
 	}
-	cout << "  ÐÂÄ¿Â¼´´½¨³É¹¦£¡" << endl;
-
+	string tmps;
+	tmps = "  Md order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 	return;
 }
 void Rd() {//rd path
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
-	if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬É¾³ýÊ§°Ü£¡" << endl;
+	if (inode == INF) {
+		string tmps;
+		tmps = "  Failed: The path is not exist!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+	}
 	else {
 		unsigned int tmp = inodetb.inode[inode].last_pos;
 		RemoveDir(inode);
-		cout << "  Ä¿Â¼É¾³ý³É¹¦£¡" << endl;
+		string tmps;
+		tmps = "  Rd order executed successfully!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 		CurrentPath = tmp;
 	}
 	return;
@@ -1009,7 +1292,11 @@ void Rd() {//rd path
 void Newfile() {//newfile filename »ò newfile filename path
 	if (order.cnt == 2) {//newfile filename ÔÚµ±Ç°Ä¿Â¼ÏÂÐÂ½¨ÎÄ¼þ
 		if (Exist(CurrentPath, order.od[1]) == true) {
-			cout << "  ¸ÃÎÄ¼þÒÑ´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+			string tmps;
+			tmps = "  Failed: The File already existed!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
 			return;
 		}
 		CreateNewFile(CurrentPath, order.od[1]);
@@ -1017,22 +1304,42 @@ void Newfile() {//newfile filename »ò newfile filename path
 	else {//newfile filename path ÔÚpathËùÔÚµÄÄ¿Â¼ÏÂÐÂ½¨Ä¿Â¼
 		FindAbsolutePath(order.od[2]);
 		unsigned int inode = FindFileINode(order.od[2]);
-		if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+		if (inode == INF) {
+			string tmps;
+			tmps = "  Failed: The path is not exist!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
 		else {
 			if (Exist(inode, order.od[1]) == true) {
-				cout << "  ¸ÃÎÄ¼þÒÑ´æÔÚ£¬ÐÂ½¨Ê§°Ü£¡" << endl;
+				string tmps;
+				tmps = "  Failed: The File already existed!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
 				return;
 			}
 			CreateNewFile(inode, order.od[1]);
 		}
 	}
-	cout << "  ÐÂÎÄ¼þ´´½¨³É¹¦£¡" << endl;
+	string tmps;
+	tmps = "  Newfile order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 	return;
 }
 void Cat() {//cat path <r, w>
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
-	if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬´ò¿ªÊ§°Ü£¡" << endl;
+	if (inode == INF) {
+		string tmps;
+		tmps = "  Failed: The path is not exist!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+	}
 	else {
 		if (order.od[2] == "r") {
 			CatRead(inode);
@@ -1053,10 +1360,20 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 			unsigned int lastpos = order.od[1].find_last_of("\\");//ÌáÈ¡ÎÄ¼þÃû
 			string filename = order.od[1].substr(lastpos + 1);
 			unsigned int inode = FindFileINode(order.od[2]);
-			if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
+			if (inode == INF) {
+				string tmps;
+				tmps = "  Failed: The path is not exist!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
 			else {
 				if (Exist(inode, filename) == true) {
-					cout << "  ¸ÃÎÄ¼þÒÑ´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
+					string tmps;
+					tmps = "  Failed: The File already existed!\n";
+					smo.cnt = 1;
+					strcpy_s(smo.str[0], tmps.c_str());
+					WriteShareMemory();
 					return;
 				}
 
@@ -1065,7 +1382,13 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 		}
 		else {//ÎÄ¼þÏµÍ³¿½±´µ½Ö÷»ú
 			unsigned int inode = FindFileINode(order.od[2]);
-			if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
+			if (inode == INF) {
+				string tmps;
+				tmps = "  Failed: The path is not exist!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
 			else {
 				CatReadToHost(inode, order.od[1]);
 			}
@@ -1078,10 +1401,20 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 		FindAbsolutePath(order.od[1]);
 		unsigned int inode1 = FindFileINode(order.od[1]);
 		unsigned int inode2 = FindFileINode(order.od[2]);
-		if (inode1 == INF || inode2 == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
+		if (inode1 == INF || inode2 == INF) {
+			string tmps;
+			tmps = "  Failed: The path is not exist!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
 		else {
 			if (Exist(inode2, filename) == true) {
-				cout << "  ¸ÃÎÄ¼þÒÑ´æÔÚ£¬¿½±´Ê§°Ü£¡" << endl;
+				string tmps;
+				tmps = "  Failed: The File already existed!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
 				return;
 			}
 			CopyLxfs(filename, inode1, inode2);
@@ -1092,11 +1425,21 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 void Del() {//del path
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
-	if (inode == INF) cout << "  ÊäÈëÂ·¾¶²»´æÔÚ£¬É¾³ýÊ§°Ü£¡" << endl;
+	if (inode == INF) {
+		string tmps;
+		tmps = "  Failed: The path is not exist!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+	}
 	else {
 		unsigned int tmp = inodetb.inode[inode].last_pos;
 		RemoveFile(inode);
-		cout << "  ÎÄ¼þÉ¾³ý³É¹¦£¡" << endl;
+		string tmps;
+		tmps = "  Del order executed successfully!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
 		CurrentPath = tmp;
 	}
 
@@ -1104,9 +1447,11 @@ void Del() {//del path
 }
 void Check() {//check
 	WriteFileSystem();
-	cout << "  ÒÑ½«ÄÚ´æÖÐµÄÎÄ¼þÏµÍ³ÐÅÏ¢Ð´Èë´ÅÅÌ£¡" << endl;
-	cout << "  ÒÑ¶ÔÎÄ¼þÏµÍ³½øÐÐÊý¾ÝÔÚÕûÀí£¡" << endl;
-
+	string tmps;
+	tmps = "  Check order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
 	return;
 }
 void Ls() {
@@ -1117,48 +1462,68 @@ void Ls() {
 
 void Run() {//ÔËÐÐ³ÌÐò
 	//step1: ÏÔÊ¾¸öÈËÐÅÏ¢
-	cout << "++++++++++++++++++++++++++++++++++++++" << endl;
-	cout << "++         ²Ù×÷ÏµÍ³¿Î³ÌÉè¼Æ         ++" << endl;
-	cout << "++       ³ÂÐÇ³½    201736612486     ++" << endl;
-	cout << "++         Ö¸µ¼ÀÏÊ¦£º Áõ·¢¹ó        ++" << endl;
-	cout << "++++++++++++++++++++++++++++++++++++++" << endl;
-	
+	string tmps[20];
+	tmps[0] = "++++++++++++++++++++++++++++++++++++++++++++++\n";
+	tmps[1] = "++              OS Course Design            ++\n";
+	tmps[2] = "++        Chen Xingchen    201736612486     ++\n";
+	tmps[3] = "++            Teacher       Liu Fagui       ++\n";
+	tmps[4] = "++++++++++++++++++++++++++++++++++++++++++++++\n";
+	smo.cnt = 5;
+	for (int i = 0; i < 5; i++) {
+		strcpy_s(smo.str[i], tmps[i].c_str());
+	}
+	WriteShareMemory();
+
 	//step2: ²é¿´ÓÐÃ»ÓÐ½¨Á¢¹ýµÄÎÄ¼þÏµÍ³£¬ÈôÃ»ÓÐ¸ø³ö³õÊ¼»¯Ñ¡Ôñ£¬ÈôÓÐÔò½øÈëÏµÍ³
 	bool check = FindDisk();
 	if (check == false) {
-		cout << "  ¼ì²âµ½Ã»ÓÐLinuxÎÄ¼þÏµÍ³£¬ÊÇ·ñ³õÊ¼»¯£¿Y/N" << endl;
-		string s; cin >> s;
+		tmps[0] = "  Can not find Linux FileSystem, do you need initialization?  Y/N\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps[0].c_str());
+		WriteShareMemory();
+
+		string s;
+		ReadShareMemory();
+		s = smi.str[0];
+
 		if (s == "y" || s == "Y" || s == "yes" || s == "YES" || s == "Yes") {
-			cout << "  ÕýÔÚ³õÊ¼»¯£¬ÇëÉÔºó..." << endl;
 			CreateFileSystem();
-			cout << "  ´´½¨³É¹¦£¬ÕýÔÚ½øÈëÏµÍ³" << endl;
-			Sleep(300);
+			tmps[0] = "  Init order executed successfully!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 		}
 		else {
-			cout << "  Ã»ÓÐÎÄ¼þÏµÍ³£¬Á½Ãëºó½áÊø³ÌÐò" << endl;
-			Sleep(2000);
+			tmps[0] = "  The program will terminate after 2 seconds...\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 			return;
 		}
 	}
 	else {
-		cout << "  ÕýÔÚ½øÈëÏµÍ³..." << endl;
+		tmps[0] = "  Entering the FileSystem...\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps[0].c_str());
+		WriteShareMemory();
 		ReadFileSystem();
-		Sleep(500);
 	}
 
 	//step3: Çå¿ÕÆÁÄ» ¸ø³öÃüÁîÌáÊ¾ ÉèÖÃµ±Ç°Â·¾¶Îª¸ùÄ¿Â¼
-	system("cls");
 	ShowHelp();
 	CurrentPath = RootDir;
 
 	//step4: Ñ­»·½ÓÊÕÃüÁî£¬Ö±µ½ÊäÈëexit
-	while (1) {
-		ShowPath(); FindOrder(order);//»ñµÃÃüÁî
+	while (true) {
+		ShowPath(); 
+		FindOrder(order);//»ñµÃÃüÁî
 		
 		switch (order.type) {
 		case 0:		//Exit
-			cout << "  ÕýÔÚÍË³öÏµÍ³..." << endl;
-			Sleep(500);
+			tmps[0] = "  Exiting the FileSystem...\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 			return;
 
 		case 1:		//info
@@ -1196,18 +1561,25 @@ void Run() {//ÔËÐÐ³ÌÐò
 			break;
 
 		default:
-			cout << "  ÊäÈëÖ¸ÁîÓÐÎó£¬ÇëÖØÐÂÊäÈë£¡" << endl;
+			tmps[0] = "  The code is wrong, please re-enter the order again!...\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps[0].c_str());
+			WriteShareMemory();
 		}
 	}
 
-	cout << "  ÒÑÍË³öÏµÍ³£¡" << endl;
+	tmps[0] = "  Exit order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps[0].c_str());
+	WriteShareMemory();
+
 	return;
 }
 
 
 int main() {
 	srand((unsigned int)time(NULL));
-
+	
 	/*
 	RandMd();
 	RandNewfile();
@@ -1221,7 +1593,40 @@ int main() {
 	Print();
 	*/
 	
+	//´´½¨¹²ÏíÎÄ¼þ
+	hMapFileIoo = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		BUF_SIZE,
+		NameIoo);
+	if (hMapFileIoo == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+		return 0;
+	}
+
+	// Ó³Éä¶ÔÏóµÄÒ»¸öÊÓÍ¼£¬µÃµ½Ö¸Ïò¹²ÏíÄÚ´æµÄÖ¸Õë£¬ÉèÖÃÀïÃæµÄÊý¾Ý
+	pBufIoo = (InputOrOutput*)MapViewOfFile(hMapFileIoo,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufIoo == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+		CloseHandle(hMapFileIoo);
+		return 0;
+	}
+
+	//ÔËÐÐ³ÌÐò
 	Run();
-	
+
+	//Ð¶ÔØÄÚ´æÓ³ÉäÎÄ¼þµØÖ·Ö¸Õë
+	UnmapViewOfFile(pBufIoo);
+	//¹Ø±ÕÄÚ´æÓ³ÉäÎÄ¼þ
+	CloseHandle(hMapFileIoo);
+
 	return 0;
 }
