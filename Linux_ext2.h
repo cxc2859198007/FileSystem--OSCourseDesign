@@ -20,9 +20,11 @@
 #include<atlconv.h> 
 using namespace std;
 #define BUF_SIZE 8192
-TCHAR NameIn[] = TEXT("INPUT");
-TCHAR NameOut[] = TEXT("OUTPUT");
-TCHAR NameIoo[] = TEXT("INPUTOROUTPUT");
+char NameUser[] = "USER";
+char NameRW[] = "READERWRITER";
+char NameIn[50] = "INPUT";
+char NameOut[50] = "OUTPUT";
+char NameIoo[50] = "INPUTOROUTPUT";
 
 typedef double db;
 const unsigned int INF = 1e9 + 7;
@@ -51,6 +53,7 @@ const unsigned int FileNum1 = 32768;		             //总文件数量上限
 const unsigned int FileNum2 = 256;		                 //每个目录文件下的文件数量上限
 
 unsigned int CurrentPath = RootDir;                      //当前路径，存储iNode编号，初始为根目录
+char CurrentUser[50];                                    //当前用户名，由shell端放入共享内存提供
 
 class BootBlock {//1block 1024B 8192b
 public:
@@ -236,6 +239,45 @@ public:
 	}
 }order;
 
+class User {//用户名，用于与shell端建立连接
+public:
+	char name[50];
+
+	User() {
+		memset(name, '\0', sizeof(name));
+	}
+};
+
+class ReaderWriter {//实现读者--写者问题的共享内存
+public:
+	//判断当前进程是不是第一个启动的进程，如果是则需要初始化读者写者的共享内存
+	bool first;
+	
+	//读者写者问题的信号量和计数参数
+	int rw;
+	int mutex;
+	int count;
+	
+	//唤醒与等待
+	char wakeup1[50], wakeup2[50];
+	int cnt1, cnt2;
+	char wait1[30][50], wait2[30][50];
+
+	ReaderWriter() {
+		first = false;
+		
+		rw = 0;
+		mutex = 0;
+		count = 0;
+
+		memset(wakeup1, '\0', sizeof(wakeup1));
+		memset(wakeup2, '\0', sizeof(wakeup2));
+		cnt1 = 0; cnt2 = 0;
+		memset(wait1, '\0', sizeof(wait1));
+		memset(wait2, '\0', sizeof(wait2));
+	}
+};
+
 class ShareMemory {//与shell交换数据
 public:
 	int cnt;
@@ -272,6 +314,13 @@ InputOrOutput ioo;
 queue<Block> buffer;//缓冲区，用于copy<host>命令
 queue<unsigned int> qdirinode;//用于ls命令
 
+HANDLE hMapFileUser;
+User* pBufUser = NULL;
+
+HANDLE hMapFileRW;
+ReaderWriter strw;
+ReaderWriter* pBufRW = &strw;
+
 HANDLE hMapFileIoo;
 InputOrOutput stioo;
 InputOrOutput* pBufIoo = &stioo;
@@ -283,8 +332,86 @@ HANDLE hMapFileOut;
 ShareMemory stout;
 ShareMemory* pBufOut = &stout;
 
-void Run();//运行程序
 
+void Run();
+/*
+	Description: 运行程序
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+
+void GetUser();
+/*
+	Description: 获得用户名，用于与simdisk建立连接
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+
+void InitRW();
+/*
+	Description: 初始化读者--写者问题的共享内存
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Prw();
+/*
+	Description: P(rw)
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Vrw();
+/*
+	Description: V(rw)
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Pmutex();
+/*
+	Description: P(mutex)
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Vmutex();
+/*
+	Description: V(mutex)
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Reader1();
+/*
+	Description: 读者前半部分
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Reader2();
+/*
+	Description: 读者后半部分
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Writer1();
+/*
+	Description: 写者前半部分
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+void Writer2();
+/*
+	Description: 写者后半部分
+	Input: 无
+	Output: 无
+	Return: 无
+*/
 
 void FindOrder(Order& ord);
 /*

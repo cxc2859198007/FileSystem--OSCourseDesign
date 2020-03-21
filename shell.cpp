@@ -18,9 +18,19 @@
 #include<atlconv.h> 
 using namespace std;
 #define BUF_SIZE 8192
-TCHAR NameIn[] = TEXT("INPUT");
-TCHAR NameOut[] = TEXT("OUTPUT");
-TCHAR NameIoo[] = TEXT("INPUTOROUTPUT");
+char NameUser[] = "USER";
+char NameIn[50] = "INPUT";
+char NameOut[50] = "OUTPUT";
+char NameIoo[50] = "INPUTOROUTPUT";
+
+class User {
+public:
+	char name[50];
+	
+	User() {
+		memset(name, '\0', sizeof(name));
+	}
+};
 
 class ShareMemory {
 public:
@@ -47,6 +57,10 @@ public:
 	}
 };
 
+HANDLE hMapFileUser;
+User user;
+User* pBufUser = &user;
+
 HANDLE hMapFileIoo;
 InputOrOutput* pBufIoo = NULL;
 
@@ -56,6 +70,68 @@ ShareMemory* pBufIn = &stin;
 
 HANDLE hMapFileOut;
 ShareMemory* pBufOut = NULL;
+
+void GetUser() {//获得用户名，用于与simdisk建立连接
+	//创建共享文件
+	hMapFileUser = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		BUF_SIZE,
+		NameUser);
+	if (hMapFileUser == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+		return;
+	}
+
+	// 映射对象的一个视图，得到指向共享内存的指针，设置里面的数据
+	pBufUser = (User*)MapViewOfFile(hMapFileUser,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufUser == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+		CloseHandle(hMapFileUser);
+		return;
+	}
+
+	//清空
+	char tmpc[50]; memset(tmpc, '\0', sizeof(tmpc));
+	tmpc[0] = 'N'; tmpc[1] = 'O'; tmpc[2] = 'N'; tmpc[3] = 'E';
+	for (int i = 0; i < 50; i++)
+		pBufUser->name[i] = tmpc[i];
+
+	//输入用户名
+	cout << "Please input the username: ";
+	cin >> pBufUser->name;
+
+	//获得NameIn、NameOut、NameIoo的值
+	strcat_s(NameIn, pBufUser->name);
+	strcat_s(NameOut, pBufUser->name);
+	strcat_s(NameIoo, pBufUser->name);
+
+	//等待simdisk读取用户名
+	
+	while (true) {
+		string tmps = string(pBufUser->name);
+		if (tmps == "GET") {//simdisk已经获得了用户名
+			for (int i = 0; i < 50; i++)
+				pBufUser->name[i] = tmpc[i];
+			break;
+		}
+	}
+
+	//关闭
+	UnmapViewOfFile(pBufUser);
+	CloseHandle(hMapFileUser);
+
+	Sleep(10);
+	return;
+}
 
 void Input() {//向输入共享内存存放一行数据，flag==true时有效
 	//创建共享文件
@@ -110,13 +186,13 @@ void Input() {//向输入共享内存存放一行数据，flag==true时有效
 		}
 	}
 
+	//关闭
 	UnmapViewOfFile(pBufIn);
 	CloseHandle(hMapFileIn);
 
 	Sleep(10);
 	return;
 }
-
 void Output() {//读取共享内存中的数据，并输出
 	// 打开命名共享内存
 	hMapFileOut = OpenFileMapping(
@@ -164,6 +240,7 @@ void Output() {//读取共享内存中的数据，并输出
 		}
 	}
 
+	//关闭
 	UnmapViewOfFile(pBufOut);
 	CloseHandle(hMapFileOut);
 
@@ -171,7 +248,7 @@ void Output() {//读取共享内存中的数据，并输出
 	return;
 }
 
-int main() {
+void Run() {
 	// 打开命名共享内存
 	hMapFileIoo = OpenFileMapping(
 		FILE_MAP_ALL_ACCESS,
@@ -180,7 +257,7 @@ int main() {
 	if (hMapFileIoo == NULL) {
 		int error = GetLastError();
 		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
-		return 0;
+		return;
 	}
 
 	// 映射对象的一个视图，得到指向共享内存的指针，获取里面的数据
@@ -193,13 +270,13 @@ int main() {
 		int error = GetLastError();
 		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
 		CloseHandle(hMapFileIoo);
-		return 0;
+		return;
 	}
 
 	//获取
 	while (true) {
 		if (pBufIoo->toshell == 0) {
-		
+
 		}
 		else if (pBufIoo->toshell == 1) {
 			Input();
@@ -211,9 +288,21 @@ int main() {
 
 	//卸载内存映射文件地址指针
 	UnmapViewOfFile(pBufIoo);
-	
 	//关闭内存映射文件
 	CloseHandle(hMapFileIoo);
+
+	return;
+}
+
+int main() {
+	//与simdisk建立连接
+	GetUser();
+
+	//必须要等待一段时间，等simdisk端建立Ioo的共享内存区
+	Sleep(100);
+
+	//运行
+	Run();
 
 	return 0;
 }

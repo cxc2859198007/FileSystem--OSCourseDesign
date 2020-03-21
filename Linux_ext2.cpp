@@ -1182,17 +1182,29 @@ void ShowPath() {
 	return;
 }
 
-
 void Info() {//info
+	Reader1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	ShowInfo();
+
+	Reader2();
 	return;
 }
 void Cd() {//cd path
+	Reader1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	FindAbsolutePath(order.od[1]);
 	ChangeDir(order.od[1]);
+	
+	Reader2();
 	return;
 }
 void Dir() {//dir 或 dir s 或 dir path 或 dir path s
+	Reader1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	if (order.cnt == 1) {//当前目录，不显示子目录
 		ShowDir(CurrentPath);
 	}
@@ -1224,9 +1236,14 @@ void Dir() {//dir 或 dir s 或 dir path 或 dir path s
 		}
 		else ShowDir(inode, true);
 	}
+
+	Reader2();
 	return;
 }
 void Md() {//md dirname 或 md dirname path
+	Writer1();
+	
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	if (order.cnt == 2) {//md dirname 在当前目录下新建目录
 		if (Exist(CurrentPath, order.od[1]) == true) {
 			string tmps;
@@ -1265,9 +1282,14 @@ void Md() {//md dirname 或 md dirname path
 	smo.cnt = 1;
 	strcpy_s(smo.str[0], tmps.c_str());
 	WriteShareMemory();
+
+	Writer2();
 	return;
 }
 void Rd() {//rd path
+	Writer1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
 	if (inode == INF) {
@@ -1287,9 +1309,14 @@ void Rd() {//rd path
 		WriteShareMemory();
 		CurrentPath = tmp;
 	}
+
+	Writer2();
 	return;
 }
 void Newfile() {//newfile filename 或 newfile filename path
+	Writer1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	if (order.cnt == 2) {//newfile filename 在当前目录下新建文件
 		if (Exist(CurrentPath, order.od[1]) == true) {
 			string tmps;
@@ -1328,11 +1355,17 @@ void Newfile() {//newfile filename 或 newfile filename path
 	smo.cnt = 1;
 	strcpy_s(smo.str[0], tmps.c_str());
 	WriteShareMemory();
+
+	Writer2();
 	return;
 }
 void Cat() {//cat path <r, w>
+	Reader1();
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
+	Reader2();
+
 	if (inode == INF) {
 		string tmps;
 		tmps = "  Failed: The path is not exist!\n";
@@ -1342,19 +1375,26 @@ void Cat() {//cat path <r, w>
 	}
 	else {
 		if (order.od[2] == "r") {
+			Reader1();
 			CatRead(inode);
+			CurrentPath = inodetb.inode[inode].last_pos;
+			Reader2();
 		}
 		else if (order.od[2] == "w") {
+			Writer1();
 			CatWrite(inode);
+			CurrentPath = inodetb.inode[inode].last_pos;
+			Writer2();
 		}
-		CurrentPath = inodetb.inode[inode].last_pos;
 	}
 
 	return;
 }
 void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> 或 copy<lxfs> /xxx/yyy/zzz /aaa/bbb
-	FindAbsolutePath(order.od[2]);
+	Writer1();
 
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
+	FindAbsolutePath(order.od[2]);
 	if (order.od[0] == "copy<host>") {//host-->Linux
 		if (order.od[3] == "0") {//主机拷贝到文件系统
 			unsigned int lastpos = order.od[1].find_last_of("\\");//提取文件名
@@ -1420,9 +1460,14 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> 或 copy<lxfs> /xxx/yyy/z
 			CopyLxfs(filename, inode1, inode2);
 		}
 	}
+
+	Writer2();
 	return;
 }
 void Del() {//del path
+	Writer1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	FindAbsolutePath(order.od[1]);
 	unsigned int inode = FindFileINode(order.od[1]);
 	if (inode == INF) {
@@ -1443,19 +1488,265 @@ void Del() {//del path
 		CurrentPath = tmp;
 	}
 
+	Writer2();
 	return;
 }
 void Check() {//check
+	Writer1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	WriteFileSystem();
 	string tmps;
 	tmps = "  Check order executed successfully!\n";
 	smo.cnt = 1;
 	strcpy_s(smo.str[0], tmps.c_str());
 	WriteShareMemory();
+
+	Writer2();
 	return;
 }
-void Ls() {
+void Ls() {//ls
+	Reader1();
+
+	ReadFileSystem();//当前进程存储在内存中的数据可能与系统不一致（其他进程可能对文件增删改）
 	ShowList();
+
+	Reader2();
+	return;
+}
+
+void GetUser() {
+	hMapFileUser = OpenFileMapping(
+		FILE_MAP_ALL_ACCESS,
+		FALSE,
+		NameUser);
+	if (hMapFileUser == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+		return;
+	}
+
+	// 映射对象的一个视图，得到指向共享内存的指针，获取里面的数据
+	pBufUser = (User*)MapViewOfFile(hMapFileUser,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufUser == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+		CloseHandle(hMapFileUser);
+		return;
+	}
+
+	//获得用户名
+	char tmpc[50] = "GET";
+	while (true) {
+		string tmps = string(pBufUser->name);
+		if (tmps != "NONE") {
+			strcat_s(NameIn, pBufUser->name);
+			strcat_s(NameOut, pBufUser->name);
+			strcat_s(NameIoo, pBufUser->name);
+			strcpy_s(CurrentUser, pBufUser->name);
+			Sleep(100);//等待0.1s, 让shell端计算出NameIn、NameOut和NameIoo
+			for (int i = 0; i < 50; i++)
+				pBufUser->name[i] = tmpc[i];
+
+			break;
+		}
+		else {//必须要等待一段时间，否则shell端输入的流只会读取到第一个字符改变就进入if
+			Sleep(50);
+		}
+	}
+
+	//关闭
+	UnmapViewOfFile(pBufUser);
+	CloseHandle(hMapFileUser);
+
+	Sleep(10);
+	return;
+}
+
+void InitRW() {
+	hMapFileRW = CreateFileMapping(
+		INVALID_HANDLE_VALUE,
+		NULL,
+		PAGE_READWRITE,
+		0,
+		BUF_SIZE,
+		NameRW);
+	if (hMapFileRW == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not create file mapping object (%d).\n"), error);
+		return;
+	}
+
+	pBufRW = (ReaderWriter*)MapViewOfFile(hMapFileRW,
+		FILE_MAP_ALL_ACCESS,
+		0,
+		0,
+		BUF_SIZE);
+	if (pBufRW == NULL) {
+		int error = GetLastError();
+		_tprintf(TEXT("Could not map view of file (%d).\n"), error);
+		CloseHandle(hMapFileRW);
+		return;
+	}
+
+	if (pBufRW->first == true) return;
+
+
+	pBufRW->first = true;
+
+	pBufRW->rw = 1;
+	pBufRW->mutex = 1;
+	pBufRW->count = 0;
+	
+	for (int i = 0; i < 50; i++) {
+		pBufRW->wakeup1[i] = '\0';
+		pBufRW->wakeup2[i] = '\0';
+	}
+	pBufRW->cnt1 = 0; pBufRW->cnt2 = 0;
+	for (int i = 0; i < 30; i++) {
+		for (int j = 0; j < 50; j++) {
+			pBufRW->wait1[i][j] = '\0';
+			pBufRW->wait2[i][j] = '\0';
+		}
+	}
+
+	return;
+}
+
+void Prw() {
+	if (pBufRW->rw > 0) {//信号量有效，可以继续执行
+		pBufRW->rw = pBufRW->rw - 1;
+	}
+	else {//信号量无效
+		//此进程进入等待列表
+		for (int i = 0; i < 50; i++) {
+			pBufRW->wait1[pBufRW->cnt1][i] = CurrentUser[i];
+		}
+		pBufRW->cnt1++;
+
+		//等待唤醒
+		while (true) {
+			if (strcmp(pBufRW->wakeup1, CurrentUser) == 0) {//唤醒
+				pBufRW->rw = pBufRW->rw - 1;
+				for (int i = 0; i < 50; i++) {
+					pBufRW->wakeup1[i] = '\0';
+				}
+				return;
+			}
+			else {
+				Sleep(1000);
+				string tmps;
+				tmps = "  waiting...\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
+		}
+	}
+
+	return;
+}
+void Vrw() {
+	if (pBufRW->cnt1 == 0) {//没有等待的进程
+		pBufRW->rw = pBufRW->rw + 1;
+	}
+	else {//有等待的进程，唤醒一个并更新等待列表
+		pBufRW->rw = pBufRW->rw + 1;
+		for (int i = 0; i < 50; i++) {
+			pBufRW->wakeup1[i] = pBufRW->wait1[0][i];
+		}
+		pBufRW->cnt1 = pBufRW->cnt1 - 1;
+		for (int i = 0; i < pBufRW->cnt1; i++) {
+			for (int j = 0; j < 50; j++) {
+				pBufRW->wait1[i][j] = pBufRW->wait1[i + 1][j];
+			}
+		}
+	}
+
+	return;
+}
+
+void Pmutex() {
+	if (pBufRW->mutex > 0) {//信号量有效，可以继续执行
+		pBufRW->mutex = pBufRW->mutex - 1;
+	}
+	else {//信号量无效
+		//此进程进入等待列表
+		for (int i = 0; i < 50; i++) {
+			pBufRW->wait2[pBufRW->cnt2][i] = CurrentUser[i];
+		}
+		pBufRW->cnt2++;
+
+		//等待唤醒
+		while (true) {
+			if (strcmp(pBufRW->wakeup2, CurrentUser) == 0) {//唤醒
+				pBufRW->mutex = pBufRW->mutex - 1;
+				for (int i = 0; i < 50; i++) {
+					pBufRW->wakeup2[i] = '\0';
+				}
+				return;
+			}
+			else {
+				Sleep(1000);
+				string tmps;
+				tmps = "  waiting...\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
+		}
+	}
+}
+void Vmutex() {
+	if (pBufRW->cnt2 == 0) {//没有等待的进程
+		pBufRW->mutex = pBufRW->mutex + 1;
+	}
+	else {//有等待的进程，唤醒一个并更新等待列表
+		pBufRW->mutex = pBufRW->mutex + 1;
+		for (int i = 0; i < 50; i++) {
+			pBufRW->wakeup2[i] = pBufRW->wait2[0][i];
+		}
+		pBufRW->cnt2 = pBufRW->cnt2 - 1;
+		for (int i = 0; i < pBufRW->cnt2; i++) {
+			for (int j = 0; j < 50; j++) {
+				pBufRW->wait2[i][j] = pBufRW->wait2[i + 1][j];
+			}
+		}
+	}
+
+	return;
+}
+
+
+void Writer1() {
+	Prw();
+	return;
+}
+void Writer2() {
+	Vrw();
+	return;
+}
+
+
+void Reader1() {
+	Pmutex();
+	if (pBufRW->count == 0)
+		Prw();
+	pBufRW->count = pBufRW->count + 1;
+	Vmutex();
+
+	return;
+}
+void Reader2() {
+	Pmutex();
+	pBufRW->count = pBufRW->count - 1;
+	if (pBufRW->count == 0)
+		Vrw();
+	Vmutex();
 
 	return;
 }
@@ -1576,7 +1867,6 @@ void Run() {//运行程序
 	return;
 }
 
-
 int main() {
 	srand((unsigned int)time(NULL));
 	
@@ -1592,7 +1882,14 @@ int main() {
 	RandCopylinux();
 	Print();
 	*/
-	
+
+
+	//建立读者写者共享内存
+	InitRW();
+
+	//与Shell建立连接
+	GetUser();
+
 	//创建共享文件
 	hMapFileIoo = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
