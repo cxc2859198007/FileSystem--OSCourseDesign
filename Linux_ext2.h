@@ -54,6 +54,8 @@ const unsigned int FileNum2 = 256;		                 //每个目录文件下的�
 
 unsigned int CurrentPath = RootDir;                      //当前路径，存储iNode编号，初始为根目录
 char CurrentUser[50];                                    //当前用户名，由shell端放入共享内存提供
+unsigned int CurrentUserId;                              //当前用户名id，由用户名哈希得到
+unsigned int CurrentMode;                                //当前命令的模式 0别的用户不可读写 1别的用户可读 2别的用户可写
 
 class BootBlock {//1block 1024B 8192b
 public:
@@ -144,7 +146,7 @@ public:
 	unsigned int type;            //type==0目录 type==1二进制文件
 	unsigned int files_num;       //如果是目录文件，记录此目录下有多少文件
 	unsigned int user_id;         //创建人id
-	unsigned int mode;		      //模式 mode==0读写 mode==1只读 
+	unsigned int mode;		      //模式mode==0别人不可读写 1别人可读 2别人可写 
 	unsigned int block_num;       //文件占用块数，目录文件最多占一个，普通文件任意
 	unsigned int block_pos[17];   //存在数据区的块号 目录文件存此目录下的文件iNode 二进制文件存数据
 
@@ -155,7 +157,7 @@ public:
 		type = 0;
 		files_num = 0;
 		user_id = root;
-		mode = 0;
+		mode = 2;
 		block_num = 1;
 		block_pos[0] = 0;//存在第0个数据块中
 		for (int i = 1; i < 17; i++) block_pos[i] = INF;
@@ -167,7 +169,7 @@ public:
 		type = 0;
 		files_num = 0;
 		user_id = root;
-		mode = 0;
+		mode = 2;
 		block_num = 1;
 		block_pos[0] = 0;
 		for (int i = 1; i < 17; i++) block_pos[i] = INF;
@@ -179,7 +181,7 @@ public:
 		type = 0;
 		files_num = 0;
 		user_id = root;
-		mode = 0;
+		mode = 2;
 		block_num = 0;
 		for (int i = 0; i < 17; i++) block_pos[i] = INF;
 	}
@@ -347,6 +349,20 @@ void GetUser();
 	Input: 无
 	Output: 无
 	Return: 无
+*/
+void GetUserId();
+/*
+	Description: 通过用户名，用哈希算法获得用户id，存入
+	Input: 无
+	Output: 无
+	Return: 无
+*/
+unsigned int ToInt(string s);
+/*
+	Description: 将数字字符串s转化为int返回
+	Input: 无
+	Output: 无
+	Return: 类型转化后的unsigned int
 */
 
 void InitRW();

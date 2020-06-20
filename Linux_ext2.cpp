@@ -381,8 +381,8 @@ unsigned int CreateNewFile(unsigned int fathinode, string filename) {//ÔÚiNodeÎª
 	inodetb.inode[soninode].next_pos = INF;		       //ÏÂÒ»¸öiNodeºÅ£¬ÓÃÓÚ³¬¹ı17KBµÄÎÄ¼ş£¬ĞÂ½¨µÄÎÄ¼şÎª¿ÕËùÒÔÓÃ²»ÉÏ
 	inodetb.inode[soninode].type = 1;				   //Ö¸Ã÷ÊÇÆÕÍ¨ÎÄ¼ş
 	inodetb.inode[soninode].files_num = 0;			   //ÆÕÍ¨ÎÄ¼ş²»»áÔÙÓĞ×ÓÎÄ¼ş£¬ËùÒÔÎª0
-	inodetb.inode[soninode].user_id = root;		       //ÏÈ¼ÙÉèÊÇroot´´½¨µÄ
-	inodetb.inode[soninode].mode = 0;				   //ÏÈ¼ÙÉèÊÇ¿É¶Á¿ÉĞ´µÄÄ¿Â¼
+	inodetb.inode[soninode].user_id = CurrentUserId;   //´´½¨ÎÄ¼şµÄÓÃ»§ID
+	inodetb.inode[soninode].mode = CurrentMode;		   //È¨ÏŞ¿ØÖÆ
 	inodetb.inode[soninode].block_num = 0;			   //¿ÕµÄÆÕÍ¨ÎÄ¼ş²»Õ¼ÓÃÊı¾İ¿é
 
 	//step5: ¸üĞÂDataBlockÖĞµÄÊı¾İ£¬ÓÉÓÚÊÇ¿ÕÎÄ¼ş£¬ËùÒÔ²»ÓÃÈÎºÎ²Ù×÷
@@ -426,8 +426,8 @@ unsigned int CreateNewDir(unsigned int fathinode, string dirname) {//´´½¨ĞÂÄ¿Â¼£
 	inodetb.inode[soninode].next_pos = INF;		       //ÏÂÒ»¸öiNodeºÅ£¬ÓÃÓÚ³¬¹ı17KBµÄÎÄ¼ş£¬Ä¿Â¼ÎÄ¼şÊÇÓÃ²»ÉÏµÄ
 	inodetb.inode[soninode].type = 0;				   //Ö¸Ã÷ÊÇÄ¿Â¼ÎÄ¼ş
 	inodetb.inode[soninode].files_num = 0;			   //´ËÄ¿Â¼ÏÂ»¹Ã»ÓĞ×ÓÄ¿Â¼»òÎÄ¼ş
-	inodetb.inode[soninode].user_id = root;		       //ÏÈ¼ÙÉèÊÇroot´´½¨µÄ
-	inodetb.inode[soninode].mode = 0;				   //ÏÈ¼ÙÉèÊÇ¿É¶Á¿ÉĞ´µÄÄ¿Â¼
+	inodetb.inode[soninode].user_id = CurrentUserId;   //´´½¨Ä¿Â¼µÄÓÃ»§ID
+	inodetb.inode[soninode].mode = CurrentMode;		   //È¨ÏŞ¿ØÖÆ
 	inodetb.inode[soninode].block_num = 1;			   //Ä¿Â¼ÎÄ¼şÖ»Õ¼Ò»¸öÊı¾İ¿éÓÃÓÚ´æ´¢×ÓÄ¿Â¼ºÍÎÄ¼şµÄiNode
 	inodetb.inode[soninode].block_pos[0] = datablock;  //¼ÇÂ¼´ËÄ¿Â¼µÄÊı¾İ¿éiNodeºÅ
 
@@ -649,7 +649,7 @@ void CatRead(unsigned int nowinode) {
 }
 void CatReadToHost(unsigned int nowinode, string path) {
 	Block db;
-	path = path + "/" + inodetb.inode[nowinode].name;
+	path = path + "\\" + inodetb.inode[nowinode].name;
 	fout.open(path, ios::out);
 	for (;;) {
 		//step1: Ã¶¾Ùµ±Ç°iNodeÏÂËùÓĞ¿éµÄÊı¾İ
@@ -675,7 +675,13 @@ void CatReadToHost(unsigned int nowinode, string path) {
 		nowinode = inodetb.inode[nowinode].next_pos;
 	}
 	
-	f.close();
+	fout.close();
+
+	string tmps = "  CopyHost order executed successfully!\n";
+	smo.cnt = 1;
+	strcpy_s(smo.str[0], tmps.c_str());
+	WriteShareMemory();
+
 	return;
 }
 void CatWrite(unsigned int nowinode) {
@@ -719,7 +725,7 @@ void CatWrite(unsigned int nowinode) {
 	else if (len % 4 == 3) str = str + " ";
 	len = str.length();
 
-	//step3: Ğ´Èë»º³åÇø
+	//step4: Ğ´Èë»º³åÇø
 	Block db;
 	int cnt = 0;
 	for (int i = 0; i < needblock; i++) {
@@ -734,14 +740,14 @@ void CatWrite(unsigned int nowinode) {
 		buffer.push(db);
 	}
 
-	//step4: ½«»º³åÇø×·¼ÓĞ´ÈëÎÄ¼şÏµÍ³
+	//step5: ½«»º³åÇø×·¼ÓĞ´ÈëÎÄ¼şÏµÍ³
 	CopyBufferToLinux(nowinode);
 	string tmps = "  CatWrite order executed successfully!\n";
 	smo.cnt = 1;
 	strcpy_s(smo.str[0], tmps.c_str());
 	WriteShareMemory();
 	
-	//step5: ¸üĞÂÎÄ¼şÏµÍ³Êı¾İ
+	//step6: ¸üĞÂÎÄ¼şÏµÍ³Êı¾İ
 	WriteFileSystem();
 
 	return;
@@ -942,11 +948,19 @@ void CopyLxfs(string filename, unsigned int fileinode, unsigned int dirinode) {/
 void ChangeDir(string newpath) {//¸Ä±äµ±Ç°¹¤×÷Ä¿Â¼£¬newpathÊÇ¾ø¶ÔÂ·¾¶
 	unsigned int x = FindFileINode(newpath);
 	if (x != INF) {
-		CurrentPath = x;
-		string tmps = "  ChangeDir order executed successfully!\n";
-		smo.cnt = 1;
-		strcpy_s(smo.str[0], tmps.c_str());
-		WriteShareMemory();
+		if (inodetb.inode[x].user_id != CurrentUserId && inodetb.inode[x].mode < 1) {
+			string tmps = "  This directory can not be read!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
+		else {
+			CurrentPath = x;
+			string tmps = "  ChangeDir order executed successfully!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+		}
 	}
 	else {
 		string tmps = "  ChangeDir order executed unsuccessfully!\n";
@@ -954,6 +968,8 @@ void ChangeDir(string newpath) {//¸Ä±äµ±Ç°¹¤×÷Ä¿Â¼£¬newpathÊÇ¾ø¶ÔÂ·¾¶
 		strcpy_s(smo.str[0], tmps.c_str());
 		WriteShareMemory();
 	}
+
+	return;
 }
 bool Exist(unsigned int fathinode, string sonname) {//ÅĞ¶ÏÔÚiNodeºÅÎªfathinodeµÄÄ¿Â¼ÏÂÓĞÃ»ÓĞÃûÎªsonnameµÄÎÄ¼ş
 	//step1: Ö±½Óµ÷ÓÃº¯ÊıÕÒiNode£¬ÕÒ²»µ½¾ÍÊÇ²»´æÔÚ
@@ -966,18 +982,18 @@ bool Exist(unsigned int fathinode, string sonname) {//ÅĞ¶ÏÔÚiNodeºÅÎªfathinodeµÄ
 void ShowHelp() {//ÃüÁîÌáÊ¾
 	string tmps[20]; 
 	tmps[0] =  "***************************Linux ext2 FileSystem***************************\n\n";
-	tmps[1] =  "    info                                          Show FileSystem Information\n";
-	tmps[2] =  "    cd path                                       Change Directory\n";
-	tmps[3] =  "    dir <path> <s>                                Show Directory\n";
-	tmps[4] =  "    md dirname <path>                             Create Directory\n";
-	tmps[5] =  "    rd path                                       Remove Directory\n";
-	tmps[6] =  "    newfile filename <path>                       Create File\n";
-	tmps[7] =  "    cat path <r,w>                                Open File\n";
-	tmps[8] =  "    copy<host> HostPath LinuxPath <0,1>           Copy Host File\n";
-	tmps[9] =  "    copy<lxfs> LinuxPath1 LinuxPath2              Copy Linux File\n";
-	tmps[10] = "    del path                                      Delete File\n";
-	tmps[11] = "    check                                         Check&Recovery System\n";
-	tmps[12] = "    ls                                            Show File List\n";
+	tmps[1] =  "    info                                           Show FileSystem Information\n";
+	tmps[2] =  "    cd path                                        Change Directory\n";
+	tmps[3] =  "    dir <path> <s>                                 Show Directory\n";
+	tmps[4] =  "    md dirname <path> 0/1/2                        Create Directory\n";
+	tmps[5] =  "    rd path                                        Remove Directory\n";
+	tmps[6] =  "    newfile filename <path> 0/1/2                  Create File\n";
+	tmps[7] =  "    cat path r/w                                   Open File\n";
+	tmps[8] =  "    copy<host> HostPath LinuxPath 0/1 0/1/2        Copy Host File\n";
+	tmps[9] =  "    copy<lxfs> LinuxPath1 LinuxPath2 0/1           Copy Linux File\n";
+	tmps[10] = "    del path                                       Delete File\n";
+	tmps[11] = "    check                                          Check&Recovery System\n";
+	tmps[12] = "    ls                                             Show File List\n";
 	tmps[13] = "\n";
 	
 	smo.cnt = 14;
@@ -1019,6 +1035,15 @@ void ShowInfo() {//ÏÔÊ¾Õû¸öÏµÍ³ĞÅÏ¢
 	return;
 }
 void ShowDir(unsigned int nowdir) {//ÏÔÊ¾iNodeºÅÎªnowdirµÄÄ¿Â¼ĞÅÏ¢
+	if (inodetb.inode[nowdir].user_id != CurrentUserId && inodetb.inode[nowdir].mode < 1) {
+		string tmps;
+		tmps = "  Failed: This directory can not be read!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+		return;
+	}
+	
 	string tmps[10];
 	tmps[0] = "   Directory Name:    " + string(inodetb.inode[nowdir].name) + "\n";
 	tmps[1] = "   Block Position:    " + to_string(groupdes.data_begin + inodetb.inode[nowdir].block_pos[0]) + "\n";
@@ -1035,6 +1060,15 @@ void ShowDir(unsigned int nowdir) {//ÏÔÊ¾iNodeºÅÎªnowdirµÄÄ¿Â¼ĞÅÏ¢
 	return;
 }
 void ShowDir(unsigned int nowdir, bool sonfile) {//ÏÔÊ¾iNodeÎªnowdirµÄÄ¿Â¼ĞÅÏ¢£¬°üÀ¨×ÓÄ¿Â¼Ãû
+	if (inodetb.inode[nowdir].user_id != CurrentUserId && inodetb.inode[nowdir].mode < 1) {
+		string tmps;
+		tmps = "  Failed: This directory can not be read!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+		return;
+	}
+	
 	string tmps[10];
 	tmps[0] = "    Directory Name:          " + string(inodetb.inode[nowdir].name) + "\n";
 	tmps[1] = "    Block Position:          " + to_string(groupdes.data_begin + inodetb.inode[nowdir].block_pos[0]) + "\n";
@@ -1185,7 +1219,7 @@ void ShowPath() {
 void Info() {//info
 	Reader1();
 
-	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
+	ReadFileSystem();
 	ShowInfo();
 
 	Reader2();
@@ -1194,7 +1228,7 @@ void Info() {//info
 void Cd() {//cd path
 	Reader1();
 
-	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
+	ReadFileSystem(); 
 	FindAbsolutePath(order.od[1]);
 	ChangeDir(order.od[1]);
 	
@@ -1204,7 +1238,7 @@ void Cd() {//cd path
 void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 	Reader1();
 
-	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
+	ReadFileSystem();
 	if (order.cnt == 1) {//µ±Ç°Ä¿Â¼£¬²»ÏÔÊ¾×ÓÄ¿Â¼
 		ShowDir(CurrentPath);
 	}
@@ -1216,7 +1250,7 @@ void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 			unsigned int inode = FindFileINode(order.od[1]);
 			if (inode == INF) {
 				string tmps;
-				tmps = "  Failed: The path is not exist!\n";
+				tmps = "  Failed: This path is not exist!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
@@ -1229,7 +1263,7 @@ void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 		unsigned int inode = FindFileINode(order.od[1]);
 		if (inode == INF) {
 			string tmps;
-			tmps = "  Failed: The path is not exist!\n";
+			tmps = "  Failed: This path is not exist!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
@@ -1240,41 +1274,69 @@ void Dir() {//dir »ò dir s »ò dir path »ò dir path s
 	Reader2();
 	return;
 }
-void Md() {//md dirname »ò md dirname path
+void Md() {//md dirname 0/1/2»ò md dirname path 0/1/2
 	Writer1();
 	
 	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
-	if (order.cnt == 2) {//md dirname ÔÚµ±Ç°Ä¿Â¼ÏÂĞÂ½¨Ä¿Â¼
+	if (order.cnt == 3) {//md dirname ÔÚµ±Ç°Ä¿Â¼ÏÂĞÂ½¨Ä¿Â¼
 		if (Exist(CurrentPath, order.od[1]) == true) {
 			string tmps;
-			tmps = "  Failed: The Directory already existed!\n";
+			tmps = "  Failed: This Directory already existed!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
+			Writer2();
 			return;
 		}
-		CreateNewDir(CurrentPath, order.od[1]);
+		else if (inodetb.inode[CurrentPath].user_id != CurrentUserId && inodetb.inode[CurrentPath].mode < 2) {
+			string tmps;
+			tmps = "  Failed: This path can not be written!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+			Writer2();
+			return;
+		}
+		else {
+			CurrentMode = ToInt(order.od[2]);
+			CreateNewDir(CurrentPath, order.od[1]);
+		}
 	}
 	else {//md dirname path ÔÚpathËùÔÚµÄÄ¿Â¼ÏÂĞÂ½¨Ä¿Â¼
 		FindAbsolutePath(order.od[2]);
 		unsigned int inode = FindFileINode(order.od[2]);
 		if (inode == INF) {
 			string tmps;
-			tmps = "  Failed: The path is not exist!\n";
+			tmps = "  Failed: This path is not exist!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
+			Writer2();
+			return;
 		}
 		else {
-			if (Exist(inode, order.od[1]) == true) {
+			if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {//²»ÊÇ×Ô¼ºµÄÂ·¾¶ÇÒ²»ÄÜĞ´Èë
 				string tmps;
-				tmps = "  Failed: The Directory already existed!\n";
+				tmps = "  Failed: This path can not be written!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
+				Writer2();
 				return;
 			}
-			CreateNewDir(inode, order.od[1]);
+			else if (Exist(inode, order.od[1]) == true) {
+				string tmps;
+				tmps = "  Failed: This Directory already existed!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+				Writer2();
+				return;
+			}
+			else {
+				CurrentMode = ToInt(order.od[3]);
+				CreateNewDir(inode, order.od[1]);
+			}
 		}
 	}
 	string tmps;
@@ -1294,7 +1356,14 @@ void Rd() {//rd path
 	unsigned int inode = FindFileINode(order.od[1]);
 	if (inode == INF) {
 		string tmps;
-		tmps = "  Failed: The path is not exist!\n";
+		tmps = "  Failed: This path is not exist!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+	}
+	else if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {
+		string tmps;
+		tmps = "  Failed: This path can not be written!\n";
 		smo.cnt = 1;
 		strcpy_s(smo.str[0], tmps.c_str());
 		WriteShareMemory();
@@ -1313,41 +1382,69 @@ void Rd() {//rd path
 	Writer2();
 	return;
 }
-void Newfile() {//newfile filename »ò newfile filename path
+void Newfile() {//newfile filename 0/1/2 »ò newfile filename path 0/1/2
 	Writer1();
 
 	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
-	if (order.cnt == 2) {//newfile filename ÔÚµ±Ç°Ä¿Â¼ÏÂĞÂ½¨ÎÄ¼ş
+	if (order.cnt == 3) {//newfile filename 0/1/2ÔÚµ±Ç°Ä¿Â¼ÏÂĞÂ½¨ÎÄ¼ş
 		if (Exist(CurrentPath, order.od[1]) == true) {
 			string tmps;
-			tmps = "  Failed: The File already existed!\n";
+			tmps = "  Failed: This File already existed!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
+			Writer2();
 			return;
 		}
-		CreateNewFile(CurrentPath, order.od[1]);
+		else if (inodetb.inode[CurrentPath].user_id != CurrentUserId && inodetb.inode[CurrentPath].mode < 2) {
+			string tmps;
+			tmps = "  Failed: This path can not be written!\n";
+			smo.cnt = 1;
+			strcpy_s(smo.str[0], tmps.c_str());
+			WriteShareMemory();
+			Writer2();
+			return;
+		}
+		else {
+			CurrentMode = ToInt(order.od[2]);
+			CreateNewFile(CurrentPath, order.od[1]);
+		}
 	}
-	else {//newfile filename path ÔÚpathËùÔÚµÄÄ¿Â¼ÏÂĞÂ½¨Ä¿Â¼
+	else {//newfile filename path 0/1/2ÔÚpathËùÔÚµÄÄ¿Â¼ÏÂĞÂ½¨Ä¿Â¼
 		FindAbsolutePath(order.od[2]);
 		unsigned int inode = FindFileINode(order.od[2]);
 		if (inode == INF) {
 			string tmps;
-			tmps = "  Failed: The path is not exist!\n";
+			tmps = "  Failed: This path is not exist!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
+			Writer2();
+			return;
 		}
 		else {
 			if (Exist(inode, order.od[1]) == true) {
 				string tmps;
-				tmps = "  Failed: The File already existed!\n";
+				tmps = "  Failed: This File already existed!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
+				Writer2();
 				return;
 			}
-			CreateNewFile(inode, order.od[1]);
+			else if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {
+				string tmps;
+				tmps = "  Failed: This path can not be written!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+				Writer2();
+				return;
+			}
+			else {
+				CurrentMode = ToInt(order.od[3]);
+				CreateNewFile(inode, order.od[1]);
+			}
 		}
 	}
 	string tmps;
@@ -1368,19 +1465,35 @@ void Cat() {//cat path <r, w>
 
 	if (inode == INF) {
 		string tmps;
-		tmps = "  Failed: The path is not exist!\n";
+		tmps = "  Failed: This path is not exist!\n";
 		smo.cnt = 1;
 		strcpy_s(smo.str[0], tmps.c_str());
 		WriteShareMemory();
 	}
 	else {
 		if (order.od[2] == "r") {
+			if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 1) {
+				string tmps;
+				tmps = "  Failed: This path can not be read!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+				return;
+			}
 			Reader1();
 			CatRead(inode);
 			CurrentPath = inodetb.inode[inode].last_pos;
 			Reader2();
 		}
 		else if (order.od[2] == "w") {
+			if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {
+				string tmps;
+				tmps = "  Failed: This path can not be written!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+				return;
+			}
 			Writer1();
 			CatWrite(inode);
 			CurrentPath = inodetb.inode[inode].last_pos;
@@ -1390,7 +1503,7 @@ void Cat() {//cat path <r, w>
 
 	return;
 }
-void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/zzz /aaa/bbb
+void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> 0/1/2 »ò copy<lxfs> /xxx/yyy/zzz /aaa/bbb 0/1/2
 	Writer1();
 
 	ReadFileSystem();//µ±Ç°½ø³Ì´æ´¢ÔÚÄÚ´æÖĞµÄÊı¾İ¿ÉÄÜÓëÏµÍ³²»Ò»ÖÂ£¨ÆäËû½ø³Ì¿ÉÄÜ¶ÔÎÄ¼şÔöÉ¾¸Ä£©
@@ -1402,7 +1515,7 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 			unsigned int inode = FindFileINode(order.od[2]);
 			if (inode == INF) {
 				string tmps;
-				tmps = "  Failed: The path is not exist!\n";
+				tmps = "  Failed: This path is not exist!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
@@ -1410,21 +1523,36 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 			else {
 				if (Exist(inode, filename) == true) {
 					string tmps;
-					tmps = "  Failed: The File already existed!\n";
+					tmps = "  Failed: This File already existed!\n";
 					smo.cnt = 1;
 					strcpy_s(smo.str[0], tmps.c_str());
 					WriteShareMemory();
-					return;
 				}
-
-				CopyHost(filename, order.od[1], inode);
+				else if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {
+					string tmps;
+					tmps = "  Failed: This path can not be written!\n";
+					smo.cnt = 1;
+					strcpy_s(smo.str[0], tmps.c_str());
+					WriteShareMemory();
+				}
+				else {
+					CurrentMode = ToInt(order.od[4]);
+					CopyHost(filename, order.od[1], inode);
+				}
 			}
 		}
 		else {//ÎÄ¼şÏµÍ³¿½±´µ½Ö÷»ú
 			unsigned int inode = FindFileINode(order.od[2]);
 			if (inode == INF) {
 				string tmps;
-				tmps = "  Failed: The path is not exist!\n";
+				tmps = "  Failed: This path is not exist!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
+			else if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 1) {
+				string tmps;
+				tmps = "  Failed: This path can not be read!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
@@ -1433,7 +1561,6 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 				CatReadToHost(inode, order.od[1]);
 			}
 		}
-
 	}
 	else {//Linux-->Linux
 		unsigned int lastpos = order.od[1].find_last_of("/");//ÌáÈ¡ÎÄ¼şÃû
@@ -1443,7 +1570,7 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 		unsigned int inode2 = FindFileINode(order.od[2]);
 		if (inode1 == INF || inode2 == INF) {
 			string tmps;
-			tmps = "  Failed: The path is not exist!\n";
+			tmps = "  Failed: This path is not exist!\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps.c_str());
 			WriteShareMemory();
@@ -1451,13 +1578,30 @@ void Copy() {//copy<host> D:\xxx\yyy\zzz /aaa/bbb <0,1> »ò copy<lxfs> /xxx/yyy/z
 		else {
 			if (Exist(inode2, filename) == true) {
 				string tmps;
-				tmps = "  Failed: The File already existed!\n";
+				tmps = "  Failed: This File already existed!\n";
 				smo.cnt = 1;
 				strcpy_s(smo.str[0], tmps.c_str());
 				WriteShareMemory();
 				return;
 			}
-			CopyLxfs(filename, inode1, inode2);
+			else if (inodetb.inode[inode1].user_id != CurrentUserId && inodetb.inode[inode1].mode < 1) {
+				string tmps;
+				tmps = "  Failed: This path can not be read!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
+			else if (inodetb.inode[inode2].user_id != CurrentUserId && inodetb.inode[inode2].mode < 2) {
+				string tmps;
+				tmps = "  Failed: This path can not be written!\n";
+				smo.cnt = 1;
+				strcpy_s(smo.str[0], tmps.c_str());
+				WriteShareMemory();
+			}
+			else {
+				CurrentMode = ToInt(order.od[3]);
+				CopyLxfs(filename, inode1, inode2);
+			}
 		}
 	}
 
@@ -1472,7 +1616,14 @@ void Del() {//del path
 	unsigned int inode = FindFileINode(order.od[1]);
 	if (inode == INF) {
 		string tmps;
-		tmps = "  Failed: The path is not exist!\n";
+		tmps = "  Failed: This path is not exist!\n";
+		smo.cnt = 1;
+		strcpy_s(smo.str[0], tmps.c_str());
+		WriteShareMemory();
+	}
+	else if (inodetb.inode[inode].user_id != CurrentUserId && inodetb.inode[inode].mode < 2) {
+		string tmps;
+		tmps = "  Failed: This path can not be written!\n";
 		smo.cnt = 1;
 		strcpy_s(smo.str[0], tmps.c_str());
 		WriteShareMemory();
@@ -1565,6 +1716,21 @@ void GetUser() {
 
 	Sleep(10);
 	return;
+}
+
+void GetUserId() {
+	CurrentUserId = 0;
+	for (int i = 0; i < 50; i++) {
+		CurrentUserId += (unsigned int)(CurrentUser[i]) * (unsigned int)(pow(10, i));
+	}
+
+	return;
+}
+
+unsigned int ToInt(string s) {
+	if (s == "0") return 0;
+	if (s == "1") return 1;
+	if (s == "2") return 2;
 }
 
 void InitRW() {
@@ -1785,7 +1951,7 @@ void Run() {//ÔËĞĞ³ÌĞò
 			WriteShareMemory();
 		}
 		else {
-			tmps[0] = "  The program will terminate after 2 seconds...\n";
+			tmps[0] = "  This program will terminate after 2 seconds...\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps[0].c_str());
 			WriteShareMemory();
@@ -1852,7 +2018,7 @@ void Run() {//ÔËĞĞ³ÌĞò
 			break;
 
 		default:
-			tmps[0] = "  The code is wrong, please re-enter the order again!...\n";
+			tmps[0] = "  This code is wrong, please re-enter the order again!...\n";
 			smo.cnt = 1;
 			strcpy_s(smo.str[0], tmps[0].c_str());
 			WriteShareMemory();
@@ -1889,6 +2055,9 @@ int main() {
 
 	//ÓëShell½¨Á¢Á¬½Ó
 	GetUser();
+
+	//»ñµÃCurrentUserId
+	GetUserId();
 
 	//´´½¨¹²ÏíÎÄ¼ş
 	hMapFileIoo = CreateFileMapping(

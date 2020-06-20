@@ -133,7 +133,7 @@ void GetUser() {//获得用户名，用于与simdisk建立连接
 	return;
 }
 
-void Input() {//向输入共享内存存放一行数据，flag==true时有效
+void Input() {//向输入共享内存存放一行数据
 	//创建共享文件
 	hMapFileIn = CreateFileMapping(
 		INVALID_HANDLE_VALUE,
@@ -190,11 +190,11 @@ void Input() {//向输入共享内存存放一行数据，flag==true时有效
 	UnmapViewOfFile(pBufIn);
 	CloseHandle(hMapFileIn);
 
-	Sleep(10);
+	Sleep(10);//我忘了这里有用没用了，貌似没用？加上肯定没错
 	return;
 }
 void Output() {//读取共享内存中的数据，并输出
-	// 打开命名共享内存
+	// 打开输出共享内存
 	hMapFileOut = OpenFileMapping(
 		FILE_MAP_READ,
 		FALSE,
@@ -244,7 +244,7 @@ void Output() {//读取共享内存中的数据，并输出
 	UnmapViewOfFile(pBufOut);
 	CloseHandle(hMapFileOut);
 
-	Sleep(10);
+	Sleep(10);//忘了为啥写这个，好像也没用？
 	return;
 }
 
